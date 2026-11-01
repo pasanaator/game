@@ -13,7 +13,7 @@
 #define W_HEIGHT 600
 #define STRETCH FALSE
 
-#define AUDIO_VOLUME 50
+#define AUDIO_VOLUME 125
 
 #define MAP_VERSION 1
 #define FILENAME "assets\\test.gmap"
