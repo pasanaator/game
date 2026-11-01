@@ -223,6 +223,9 @@ Player player = {
 
 void UpdateGame() {
 
+    if (GetAsyncKeyState('L') & 0x8000) InitMap(1);
+    if (GetAsyncKeyState('O') & 0x8000) InitMap(0);
+    
     player.movement.dirX = 0.0f;
     player.movement.dirY = 0.0f;
 
