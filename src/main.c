@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <mmsystem.h>
 #include <math.h>
+#include <stdbool.h>
 
 #include "renderer.h"
 

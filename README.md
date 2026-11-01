@@ -1,9 +1,7 @@
 Mingisugune mäng see on.
 
-Map tegemiseks editida src/mapcreate/mapcreate.c sobivas formaadis, ja siis run mapcreate.bat
+Map tegemiseks editida src\mapcreate\mapcreate.c olevat map'i sobivas formaadis, ja siis run mapcreate.bat
 
-buildimiseks, kasutada build.bat
+Buildimiseks, kasutada build.bat (PATHis peab olema gcc. Testitud GCC MSYS2 16.2.0, C23 ja C99 standarditega)
 
-buildimseks, peab olema PATHis gcc versioon, mis toetab C23
-
-mäng töötab, on loodud, ja buildib vaid windowsil
+Mäng töötab vaid Windowsil (Testitud Windows 10 peal).

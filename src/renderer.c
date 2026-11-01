@@ -3,6 +3,7 @@
 #include <math.h>
 #include <windows.h>
 #include <stdint.h>
+#include <stdbool.h>
 //--- External References to Map & Player ---
 
 typedef struct {
