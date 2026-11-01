@@ -3,9 +3,6 @@
 #include <math.h>
 #include <windows.h>
 #include <stdint.h>
-//--- Configuration Constants ---
-#define WIDTH 800
-#define HEIGHT 600
 //--- External References to Map & Player ---
 
 typedef struct {
@@ -25,10 +22,6 @@ extern uint8_t mapHeight;
 extern const int TILE_SIZE;
 extern MapTile *ActiveMap;
 
-#define grid (ActiveMap)
-#define WORLD_WIDTH mapWidth
-#define WORLD_HEIGHT mapHeight
-#define GRID_SIZE TILE_SIZE
 //--- Ray Structure Definition ---
 typedef struct {
     float rayDirX, rayDirY;         // Ray direction vector components
@@ -118,7 +111,7 @@ void render_game(DWORD *pixels, int width, int height) {
     if (width <= 0 || height <= 0) return;
 
     // --- Safety Guard: Ensure map and dimensions are valid ---
-    if (!grid || WORLD_WIDTH == 0 || WORLD_HEIGHT == 0) {
+    if (!ActiveMap || mapWidth == 0 || mapHeight == 0) {
         // Fill screen with dark gray if map isn't loaded yet
         for (int p = 0; p < width * height; p++) {
             pixels[p] = 0x00181818;
@@ -137,8 +130,8 @@ void render_game(DWORD *pixels, int width, int height) {
     float plane_x = -dirY * 0.66f; 
     float plane_y = dirX * 0.66f;  
 
-    float playerGridX = player.x / (float)GRID_SIZE;
-    float playerGridY = player.y / (float)GRID_SIZE;
+    float playerGridX = player.x / (float)TILE_SIZE;
+    float playerGridY = player.y / (float)TILE_SIZE;
 
     //--- 3. Raycasting Loop (Cast One Ray Per Screen Column) ---
     for (int i = 0; i < width; i++) {
@@ -189,10 +182,10 @@ void render_game(DWORD *pixels, int width, int height) {
             }
 
             // Strict bounds check before any array indexing
-            if (ray.mapX < 0 || ray.mapX >= (int)WORLD_WIDTH || ray.mapY < 0 || ray.mapY >= (int)WORLD_HEIGHT) {
+            if (ray.mapX < 0 || ray.mapX >= (int)mapWidth || ray.mapY < 0 || ray.mapY >= (int)mapHeight) {
                 hit = 1;
             } else {
-                int tileID = grid[ray.mapY * WORLD_WIDTH + ray.mapX].tile;
+                int tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
 
                 if (tileID == 1 || tileID == 4) {
                     hit = 1;
@@ -212,8 +205,8 @@ void render_game(DWORD *pixels, int width, int height) {
 
         //--- Retrieve Tile ID from 1D Map Array safely ---
         int tileID = 1;
-        if (ray.mapX >= 0 && ray.mapX < (int)WORLD_WIDTH && ray.mapY >= 0 && ray.mapY < (int)WORLD_HEIGHT) {
-            tileID = grid[ray.mapY * WORLD_WIDTH + ray.mapX].tile;
+        if (ray.mapX >= 0 && ray.mapX < (int)mapWidth && ray.mapY >= 0 && ray.mapY < (int)mapHeight) {
+            tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
             if (tileID <= 0) tileID = 1;
         }
 
