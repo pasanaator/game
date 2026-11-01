@@ -10,14 +10,14 @@
 
 #include "renderer.h"
 
-#define W_WIDTH 800
-#define W_HEIGHT 600
-#define STRETCH FALSE
-
 #define AUDIO_VOLUME 125
 
 #define MAP_VERSION 1
 #define FILENAME "assets\\test.gmap"
+
+int W_WIDTH = 800;
+int W_HEIGHT = 600;
+bool STRETCH = FALSE;
 
 int clientWidth = 0;
 int clientHeight = 0;
@@ -26,6 +26,7 @@ const int TILE_SIZE = 50;
 uint8_t mapWidth = 0;
 uint8_t mapHeight = 0;
 size_t totalTiles = 0;
+uint8_t total_levels = 0;
 
 typedef struct {
     float speed, currentSpeed, acceleration, maxAcceleration, accelerationGrowth, decelerationRate, dirY, dirX;
@@ -157,6 +158,7 @@ bool LoadMapFromFile(const char *filename, uint16_t level_index, MapTile **dest_
     // Set global dimensions from file header
     mapWidth = header.width;
     mapHeight = header.height;
+    total_levels = header.total_levels;
     size_t totalTiles = (size_t)mapWidth * mapHeight;
 
     long offset = (long)sizeof(MapHeader) + (long)(level_index * totalTiles * sizeof(MapTile));
@@ -197,9 +199,13 @@ void UnloadMap() {
     }
 }
 
-bool InitMap(uint16_t LevelIndex) {
-    UnloadMap();
+bool InitMap(uint8_t LevelIndex) {
+    if (LevelIndex > total_levels) {
+        perror("Invalid level index");
+        return FALSE;
+    }
 
+    UnloadMap();
     if (!LoadMapFromFile(FILENAME, LevelIndex, &ActiveMap)) {
         return FALSE;
     }
@@ -222,10 +228,11 @@ Player player = {
     }
 };
 
+
 void UpdateGame() {
 
-    if (GetAsyncKeyState('L') & 0x8000) InitMap(1);
-    if (GetAsyncKeyState('O') & 0x8000) InitMap(0);
+    if (GetAsyncKeyState('0') & 0x8000) InitMap(0);
+    if (GetAsyncKeyState('1') & 0x8000) InitMap(1);
     
     player.movement.dirX = 0.0f;
     player.movement.dirY = 0.0f;
@@ -375,27 +382,13 @@ HBITMAP CreateBlankDIB(HDC hdc, int width, int height, void** ppvBits) {
     return hBitmap;
 }
 
-void DrawFilledBox(DWORD* pixels, int screenWidth, int screenHeight, int x, int y, int size, DWORD color) {
-    int startX = max(0, x);
-    int endX   = min(screenWidth, x + size);
-    int startY = max(0, y);
-    int endY   = min(screenHeight, y + size);
-
-    for (int py = startY; py < endY; py++) {
-        int rowOffset = py * screenWidth;
-        for (int px = startX; px < endX; px++) {
-            pixels[rowOffset + px] = color;
-        }
-    }
-}
-
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_DESTROY:
             StopGameAudio();
             PostQuitMessage(0);
             return 0;
-case WM_PAINT: 
+        case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
 
@@ -433,9 +426,9 @@ case WM_PAINT:
                     DeleteObject(memBitmap);
                 }
             }
-            EndPaint(hwnd, &ps);
-            return 0;
-      
+        EndPaint(hwnd, &ps);
+        return 0;
+        }
         case WM_SIZE:
             clientWidth = LOWORD(lParam);
             clientHeight = HIWORD(lParam);
@@ -446,6 +439,14 @@ case WM_PAINT:
 }
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    if (__argc >= 4) {
+        W_WIDTH = atoi(__argv[1]);
+        W_HEIGHT = atoi(__argv[2]);
+        if (__argv[3]) {
+            STRETCH == TRUE;
+        }
+    }
+
     PlayGameAudio("assets\\backround.mp3", AUDIO_VOLUME);
     if (!InitMap(0)) return 1;
 
