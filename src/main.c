@@ -13,7 +13,7 @@
 #define AUDIO_VOLUME 125
 
 #define MAP_VERSION 1
-#define FILENAME "assets\\test.gmap"
+#define FILENAME "assets\\level.gmap"
 
 int W_WIDTH = 800;
 int W_HEIGHT = 600;
@@ -494,9 +494,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     }
 
     PlayGameAudio("assets\\backround.mp3", AUDIO_VOLUME);
-    if (!InitMap(0)) return 1;
+    if (!InitMap(0)) return 0;
 
-    const char CLASS_NAME[] = "Test";
+    const char CLASS_NAME[] = "Game";
 
     WNDCLASSA wc = { 0 };
     wc.lpfnWndProc   = WindowProc;
@@ -518,7 +518,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     HWND hwnd = CreateWindowExA(
         0,
         CLASS_NAME,
-        "Test",
+        "Game",
         style,
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right - wr.left,

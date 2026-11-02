@@ -114,6 +114,8 @@ static const MapTile maps[][MAX_TILES] = {
 
 #undef _
 #undef W
+#undef K
+#undef P
 
 #define AVAILABLE_LEVELS (sizeof(maps) / sizeof(maps[0]))
 
@@ -146,7 +148,7 @@ bool SaveMapsToFile(const char *filepath, const MapTile *map_data, uint16_t num_
 }
 
 int main(void) {
-    const char *filepath = "test.gmap"; // Adjusted relative path if needed
+    const char *filepath = "level.gmap";
     uint16_t num_levels = (uint16_t)AVAILABLE_LEVELS;
 
     printf("Welcome to the map creation tool!\n");
