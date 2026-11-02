@@ -28,6 +28,8 @@ uint8_t mapHeight = 0;
 size_t totalTiles = 0;
 uint8_t total_levels = 0;
 
+uint32_t *wallTexture = NULL;
+
 typedef struct {
     float speed, currentSpeed, acceleration, maxAcceleration, accelerationGrowth, decelerationRate, dirY, dirX;
 } Movement;
@@ -58,18 +60,10 @@ typedef struct {
     uint32_t pad;
 } MapHeader;
 
-typedef struct {
-    uint16_t x, y;
-    uint8_t sym;
-} Object;
-
 MapTile *ActiveMap = NULL;
 
-static Object *wall = NULL;
-int WallCount = 0;
-
 uint16_t LevelIndex = 0;
-
+/*
 MapTile* GetTilePtr(MapTile *map, uint16_t row, uint16_t col) {
     if (row >= mapHeight || col >= mapWidth) {
         return NULL;
@@ -83,42 +77,61 @@ bool SetTile(MapTile *map, uint16_t row, uint16_t col, uint8_t tile) {
     }
     map[(row * mapWidth) + col].tile = tile;
     return true;
-}
+} 
+*/
 
-int InitObjects(Object **o,MapTile *map, uint8_t id)  {
-    totalTiles = (size_t)mapWidth * mapHeight;
-    if (totalTiles == 0 || !map) {
-        *o = NULL;
-        return 0;
+uint32_t *LoadTextureFile(const char *filename) {
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        perror("Failed to open file!");
+        return NULL;
     }
 
-    *o = malloc(totalTiles * sizeof(Object));
-    if (*o == NULL) {
-        perror("Failed to allocate *o\n");
-        exit(1);
+    unsigned char header[54];
+    if (fread(header, 1, 54, f) != 54) {
+        perror("Not a valid BMP");
+        fclose(f);
+        return NULL;
     }
 
-    int ObjectCount = 0;
-    for (size_t i = 0; i < totalTiles; i++) {
-        if (map[i].tile == id) {
-            (*o)[ObjectCount].x = (uint16_t)(i % mapWidth);
-            (*o)[ObjectCount].y = (uint16_t)(i / mapWidth);
-            ObjectCount++;
+    int width = *(int *)&header[18];
+    int height = *(int *)&header[22];
+    int bpp = *(short *)&header[28];
+    int offset = *(int *)&header[10];
+
+    fseek(f, offset, SEEK_SET);
+
+    uint32_t *texture = malloc((width * height) * sizeof(uint32_t));
+    if (!texture) {
+        perror("Malloc failed");
+        fclose(f);
+        return NULL;
+    }
+
+    int row_stride = ((width * (bpp / 8) + 3) / 4) * 4;
+    unsigned char *row_buffer = malloc(row_stride);
+
+    for (int y = height - 1; y >= 0; y--) {
+        fread(row_buffer, 1, row_stride, f);
+        for (int x = 0; x < width; x++) {
+            int index = x * (bpp / 8);
+            
+            unsigned char b = row_buffer[index + 0];
+            unsigned char g = row_buffer[index + 1];
+            unsigned char r = row_buffer[index + 2];
+            unsigned char a = (bpp == 32) ? row_buffer[index + 3] : 255;
+
+            texture[y * (width) + x] = ((uint32_t)a << 24)       | 
+                                            ((uint32_t)r << 16)  | 
+                                            ((uint32_t)g << 8)   | 
+                                            ((uint32_t)b);
         }
     }
-    if (ObjectCount == 0) {
-        free(*o);
-        *o = NULL;
-        return 0;
-    }
-    Object *temp = realloc(*o, ObjectCount * sizeof(Object));
-    if (temp) {
-        *o = temp;
-    }
-    return ObjectCount;
+
+    free(row_buffer);
+    fclose(f);
+    return texture;
 }
-
-
 
 bool LoadMapFromFile(const char *filename, uint16_t level_index, MapTile **dest_buffer) {
 
@@ -187,17 +200,16 @@ bool LoadMapFromFile(const char *filename, uint16_t level_index, MapTile **dest_
 }
 
 void UnloadMap() {
-    if (wall) {
-        free(wall);
-        wall = NULL;
-        WallCount = 0;
-    }
+    free(wallTexture);
+    wallTexture = NULL;
 
     if (ActiveMap) {
         free(ActiveMap);
         ActiveMap = NULL;
     }
 }
+
+
 
 bool InitMap(uint8_t LevelIndex) {
     if (LevelIndex > total_levels) {
@@ -210,7 +222,12 @@ bool InitMap(uint8_t LevelIndex) {
         return FALSE;
     }
 
-    WallCount = InitObjects(&wall, ActiveMap, 1);
+    bool ExistingObjects[4];
+
+    wallTexture = LoadTextureFile("assets\\wall.bmp");
+/*    if (ExistingObjects[2]) LoadTextureFile("assets\\wall.bmp");  Future texture loading
+    if (ExistingObjects[3]) LoadTextureFile("assets\\wall.bmp");
+    if (ExistingObjects[4]) LoadTextureFile("assets\\wall.bmp"); */
     return TRUE;
 }
 

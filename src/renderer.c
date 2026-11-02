@@ -22,7 +22,7 @@ extern uint8_t mapWidth;
 extern uint8_t mapHeight;
 extern const int TILE_SIZE;
 extern MapTile *ActiveMap;
-extern unsigned int *wallTexture;
+extern uint32_t *wallTexture;
 
 //--- Ray Structure Definition ---
 typedef struct {
@@ -256,7 +256,7 @@ void render_game(DWORD *pixels, int width, int height) {
             if (texY >= 128) texY = 127;
 
             // Sample color from your loaded wall.bmp texture
-            unsigned int color;
+            uint32_t color;
             if (wallTexture) {
                 color = wallTexture[texY * 128 + texX];
             } else {
