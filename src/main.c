@@ -208,7 +208,7 @@ bool InitMap(uint8_t LevelIndex) {
         return FALSE;
     }
 
-//    wallTexture = LoadTextureFile("assets\\wall.bmp"); Disabled until proper renmderer has been implemented
+    wallTexture = LoadTextureFile("assets\\wall.bmp");
 
     return TRUE;
 }
