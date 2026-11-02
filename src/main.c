@@ -27,6 +27,7 @@ uint8_t mapWidth = 0;
 uint8_t mapHeight = 0;
 size_t totalTiles = 0;
 uint8_t total_levels = 0;
+uint8_t LevelIndex = 0;
 
 uint32_t *wallTexture = NULL;
 
@@ -43,7 +44,7 @@ typedef struct {
 typedef struct {
     uint8_t tile;
     bool isDeadly : 1;
-    bool pad1 : 1;
+    bool isLevelTransition : 1;
     bool pad2 : 1;
     bool pad3 : 1;
     bool pad4 : 1;
@@ -62,23 +63,6 @@ typedef struct {
 
 MapTile *ActiveMap = NULL;
 
-uint16_t LevelIndex = 0;
-/*
-MapTile* GetTilePtr(MapTile *map, uint16_t row, uint16_t col) {
-    if (row >= mapHeight || col >= mapWidth) {
-        return NULL;
-    }
-    return &map[(row * mapWidth) + col];
-}
-
-bool SetTile(MapTile *map, uint16_t row, uint16_t col, uint8_t tile) {
-    if (row >= mapHeight || col >= mapWidth) {
-        return false;
-    }
-    map[(row * mapWidth) + col].tile = tile;
-    return true;
-} 
-*/
 
 uint32_t *LoadTextureFile(const char *filename) {
     FILE *f = fopen(filename, "rb");
@@ -225,9 +209,7 @@ bool InitMap(uint8_t LevelIndex) {
     bool ExistingObjects[4];
 
     wallTexture = LoadTextureFile("assets\\wall.bmp");
-/*    if (ExistingObjects[2]) LoadTextureFile("assets\\wall.bmp");  Future texture loading
-    if (ExistingObjects[3]) LoadTextureFile("assets\\wall.bmp");
-    if (ExistingObjects[4]) LoadTextureFile("assets\\wall.bmp"); */
+
     return TRUE;
 }
 
@@ -244,7 +226,6 @@ Player player = {
         .dirY = 0.0f
     }
 };
-
 
 void UpdateGame() {
 
