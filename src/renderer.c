@@ -22,6 +22,7 @@ extern uint8_t mapWidth;
 extern uint8_t mapHeight;
 extern const int TILE_SIZE;
 extern MapTile *ActiveMap;
+extern unsigned int *wallTexture;
 
 //--- Ray Structure Definition ---
 typedef struct {
@@ -220,7 +221,6 @@ void render_game(DWORD *pixels, int width, int height) {
             perpWallDist = (side == 0) ? (ray.sideDistX - ray.deltaDistX) : (ray.sideDistY - ray.deltaDistY);
         }
 
-        // Avoid division by zero if distance is extremely close or zero
         if (perpWallDist < 1e-4f) perpWallDist = 1e-4f;
 
         //--- Calculate Height of Wall Strip ---
@@ -234,19 +234,43 @@ void render_game(DWORD *pixels, int width, int height) {
         int drawEnd = lineHeight / 2 + height / 2;
         if (drawEnd >= height) drawEnd = height - 1;
 
-        //--- Select Hex Color ---
-        unsigned int wallColor;
-        if (tileID == 2) {
-            wallColor = (side == 1) ? 0x00237E23 : 0x0032CD32; // Green shades
-        } else if (tileID == 3) {
-            wallColor = (side == 1) ? 0x003232CD : 0x004169E1; // Blue shades
+        //--- 1. Calculate Texture Coordinates ---
+        float wallX;
+        if (side == 0) {
+            wallX = playerGridY + perpWallDist * ray.rayDirY;
         } else {
-            wallColor = (side == 1) ? 0x008B2323 : 0x00CD5C5C; // Red shades
+            wallX = playerGridX + perpWallDist * ray.rayDirX;
         }
+        wallX -= floorf(wallX); // Keep only the decimal fraction (0.0 to 1.0)
 
-        //--- Draw Vertical Column Directly into Pixel Buffer ---
+        // Map to 128x128 texture width
+        int texX = (int)(wallX * 128.0f);
+        if (side == 0 && ray.rayDirX > 0) texX = 128 - texX - 1;
+        if (side == 1 && ray.rayDirY < 0) texX = 128 - texX - 1;
+
+        //--- 2. Draw Vertical Column Using Texture Sampling ---
         for (int y = drawStart; y <= drawEnd; y++) {
-            pixels[y * width + i] = wallColor;
+            // Scale screen pixel Y position to match the 128-pixel texture height
+            int texY = (y - drawStart) * 128 / lineHeight;
+            if (texY < 0) texY = 0;
+            if (texY >= 128) texY = 127;
+
+            // Sample color from your loaded wall.bmp texture
+            unsigned int color;
+            if (wallTexture) {
+                color = wallTexture[texY * 128 + texX];
+            } else {
+                // Fallback solid color if texture failed to load
+                color = (tileID == 2) ? 0x0032CD32 : 0x00CD5C5C; 
+            }
+
+            // Optional side-shading depth effect for horizontal/vertical walls
+            if (side == 1) {
+                color = (color >> 1) & 0x007F7F7F;
+            }
+
+            // Write directly into the window's pixel buffer
+            pixels[y * width + i] = color;
         }
     }
 }
