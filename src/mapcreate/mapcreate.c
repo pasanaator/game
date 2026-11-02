@@ -6,8 +6,8 @@
 #include <stdbool.h>
 
 #define MAP_VERSION 1
-#define MAP_HEIGHT 10
-#define MAP_WIDTH  7
+#define MAP_HEIGHT 12
+#define MAP_WIDTH  9
 #define MAX_TILES  (MAP_WIDTH * MAP_HEIGHT)
 
 #pragma pack(push, 1)
@@ -15,7 +15,7 @@
 typedef struct {
     uint8_t tile;
     bool isDeadly : 1;
-    bool pad1 : 1;
+    bool isLevelTransition : 1;
     bool pad2 : 1;
     bool pad3 : 1;
     bool pad4 : 1;
@@ -34,34 +34,81 @@ typedef struct {
 
 #pragma pack(pop)
 
-#define _  { .tile = 0, .isDeadly = false }
-#define W  { .tile = 1, .isDeadly = false }
-#define P  { .tile = 4, .isDeadly = false }
+#define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false }
+#define W  { .tile = 1, .isDeadly = false, .isLevelTransition = false }
+#define K  { .tile = 2, .isDeadly = true, .isLevelTransition = false }
+#define P  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
 
 static const MapTile maps[][MAX_TILES] = {
     {
-        W, W, W, W, W, W, W,
-        W, _, _, _, _, _, W,
-        W, _, _, _, _, _, W,
-        W, _, _, _, _, _, W,
-        W, _, _, _, _, _, W,
-        W, _, W, _, W, _, W,
-        W, _, _, _, _, _, W,
-        W, _, _, P, _, _, W,
-        W, _, _, _, _, _, W,
-        W, W, W, W, W, W, W,
+        W, W, W, W, W, W, W, W, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, P, _, P, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, P, _, P, _, P, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, P, _, P, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, P, _, P, _, P, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, W, W, W, W, W, W, W, W,
     },
     {
-        W, W, W, W, W, W, W,
-        W, _, _, _, _, _, W,
-        W, _, W, W, W, _, W,
-        W, _, _, _, _, _, W,
-        W, _, _, _, _, _, W,
-        W, _, _, _, _, _, W,
-        W, _, _, P, _, _, W,
-        W, W, _, _, _, W, W,
-        W, _, _, W, _, _, W,
-        W, W, W, W, W, W, W,
+        W, W, W, W, W, W, W, W, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, W, W, _, W, W, _, W,
+        W, _, W, _, _, _, W, _, W,
+        W, _, W, _, _, _, W, _, W,
+        W, _, W, _, _, _, W, _, W,
+        W, _, W, _, _, _, W, _, W,
+        W, _, W, W, W, W, W, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, K, K, K, _, _, W,
+        W, W, W, W, W, W, W, W, W,
+    },
+    {
+        W, W, W, W, W, W, W, W, W,
+        W, _, W, _, _, _, _, _, W,
+        W, _, W, _, W, W, W, _, W,
+        W, _, W, _, W, _, W, _, W,
+        W, _, _, _, W, _, W, _, W,
+        W, W, W, _, W, _, _, _, W,
+        W, _, _, _, W, _, W, W, W,
+        W, _, W, W, W, _, _, _, W,
+        W, _, _, _, W, W, W, _, W,
+        W, W, W, _, W, _, W, _, W,
+        W, _, _, _, _, _, W, _, W,
+        W, W, W, W, W, W, W, W, W,
+    },
+    {
+        W, W, W, W, W, W, W, W, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, W, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, K, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, P, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, W, W, W, W, W, W, W, W,
+    },
+    {
+        W, W, W, W, W, W, W, W, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, _, W,
+        W, W, W, W, W, W, W, W, W,
     }
 };
 
