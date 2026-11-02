@@ -61,8 +61,12 @@ typedef struct {
     uint32_t pad;
 } MapHeader;
 
-MapTile *ActiveMap = NULL;
+typedef struct {
+    uint16_t x, y;
+    uint8_t sym;
+} Object;
 
+MapTile *ActiveMap = NULL;
 
 uint32_t *LoadTextureFile(const char *filename) {
     FILE *f = fopen(filename, "rb");
@@ -193,8 +197,6 @@ void UnloadMap() {
     }
 }
 
-
-
 bool InitMap(uint8_t LevelIndex) {
     if (LevelIndex > total_levels) {
         perror("Invalid level index");
@@ -206,9 +208,7 @@ bool InitMap(uint8_t LevelIndex) {
         return FALSE;
     }
 
-    bool ExistingObjects[4];
-
-    wallTexture = LoadTextureFile("assets\\wall.bmp");
+//    wallTexture = LoadTextureFile("assets\\wall.bmp"); Disabled until proper renmderer has been implemented
 
     return TRUE;
 }
@@ -227,11 +227,16 @@ Player player = {
     }
 };
 
+bool Death = FALSE;
+
 void UpdateGame() {
 
     if (GetAsyncKeyState('0') & 0x8000) InitMap(0);
     if (GetAsyncKeyState('1') & 0x8000) InitMap(1);
-    
+    if (GetAsyncKeyState('2') & 0x8000) InitMap(2);
+    if (GetAsyncKeyState('3') & 0x8000) InitMap(3);
+    if (GetAsyncKeyState('4') & 0x8000) InitMap(4);
+
     player.movement.dirX = 0.0f;
     player.movement.dirY = 0.0f;
 
@@ -239,13 +244,15 @@ void UpdateGame() {
     float strafe  = 0.0f;
 
     float rotSpeed = 0.05f;
-    if (GetAsyncKeyState(VK_LEFT) & 0x8000)  player.angle -= rotSpeed;
-    if (GetAsyncKeyState(VK_RIGHT) & 0x8000) player.angle += rotSpeed;
+    if (!Death) {
+        if (GetAsyncKeyState(VK_LEFT) & 0x8000)  player.angle -= rotSpeed;
+        if (GetAsyncKeyState(VK_RIGHT) & 0x8000) player.angle += rotSpeed;
 
-    if (GetAsyncKeyState('W') & 0x8000) forward += 1.0f;
-    if (GetAsyncKeyState('S') & 0x8000) forward -= 1.0f;
-    if (GetAsyncKeyState('D') & 0x8000) strafe  += 1.0f;
-    if (GetAsyncKeyState('A') & 0x8000) strafe  -= 1.0f;
+        if (GetAsyncKeyState('W') & 0x8000) forward += 1.0f;
+        if (GetAsyncKeyState('S') & 0x8000) forward -= 1.0f;
+        if (GetAsyncKeyState('D') & 0x8000) strafe  += 1.0f;
+        if (GetAsyncKeyState('A') & 0x8000) strafe  -= 1.0f;
+    }
 
     if (forward != 0.0f && strafe != 0.0f) {
     forward *= 0.7071f;
@@ -297,7 +304,10 @@ void UpdateGame() {
         if (checkGridX >= 0 && checkGridX < mapWidth && topGridY >= 0 && botGridY < mapHeight) {
             int tileTop = ActiveMap[topGridY * mapWidth + checkGridX].tile;
             int tileBot = ActiveMap[botGridY * mapWidth + checkGridX].tile;
-            if (tileTop != 1 && tileTop != 4 && tileBot != 1 && tileBot != 4) {
+            if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isDeadly) {
+                Death = TRUE;
+            }
+            if (!(tileTop >= 1 && tileBot >= 1)) {
                 player.x = newX;
             }
         }
@@ -313,7 +323,10 @@ void UpdateGame() {
         if (leftGridX >= 0 && rightGridX < mapWidth && checkGridY >= 0 && checkGridY < mapHeight) {
             int tileLeft  = ActiveMap[checkGridY * mapWidth + leftGridX].tile;
             int tileRight = ActiveMap[checkGridY * mapWidth + rightGridX].tile;
-            if (tileLeft != 1 && tileLeft != 4 && tileRight != 1 && tileRight != 4) {
+            if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isDeadly) {
+                Death = TRUE;
+            }
+            if (!(tileLeft >= 1 && tileRight >= 1)) {
                 player.y = newY;
             }
         }
@@ -327,6 +340,20 @@ void UpdateGame() {
 
     if (player.y < 1.0f) player.y = 1.0f;
     else if (player.y > maxWorldY) player.y = maxWorldY;
+
+    if (Death) {
+        static uint16_t counter = 0;
+        // Counter uses time in frames passed, at a nominal 60FPS this equates to 2 seconds
+        if (counter == 120) {
+            // Temporarily using hardcoded values
+            player.x = 3.0f * TILE_SIZE;
+            player.y = 2.0f * TILE_SIZE;
+            InitMap(0);
+            Death = FALSE;
+            counter = 0;
+        }
+        counter++;
+    }
 }
 
 
@@ -380,6 +407,23 @@ HBITMAP CreateBlankDIB(HDC hdc, int width, int height, void** ppvBits) {
     return hBitmap;
 }
 
+void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, uint16_t y, HDC hdc, HDC memDC, uint8_t tR, uint8_t tG, uint8_t tB, uint8_t bR, uint8_t bG, uint8_t bB, const int MODE) {
+    SetTextColor(memDC, RGB(tR, tG, tB));
+    SetBkColor(memDC, RGB(bR, bG, bB));
+    SetBkMode(memDC, MODE);
+
+    HFONT hFont = CreateFont(
+        fontSize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY, VARIABLE_PITCH, font
+    );
+    HFONT hOldFont = (HFONT)SelectObject(memDC, hFont);
+
+    TextOut(memDC, x, y, text , strlen(text));
+    SelectObject(memDC, hOldFont);
+    DeleteObject(hFont);
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_DESTROY:
@@ -403,6 +447,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
                     // Render game into our buffer
                     render_game((DWORD*)ppvbits, renderWidth, renderHeight);
+
+                    if (Death) {
+                        drawText("YOU'RE DEAD!", "Terminal", 56, clientWidth / 2, clientHeight / 2, hdc, memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
+                    }
 
                     if (STRETCH) {
                         SetStretchBltMode(hdc, HALFTONE);
