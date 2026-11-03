@@ -31,6 +31,7 @@ uint8_t LevelIndex = 0;
 
 uint32_t *wallTexture = NULL;
 uint32_t *BrickwallTexture = NULL;
+uint32_t *VentTexture = NULL;
 
 typedef struct {
     float speed, currentSpeed, acceleration, maxAcceleration, accelerationGrowth, decelerationRate, dirY, dirX;
@@ -191,6 +192,7 @@ bool LoadMapFromFile(const char *filename, uint16_t level_index, MapTile **dest_
 void UnloadMap() {
     if (wallTexture) { free(wallTexture); wallTexture = NULL; }
     if (BrickwallTexture) { free(BrickwallTexture); BrickwallTexture = NULL; }
+    if (VentTexture) { free(VentTexture); VentTexture = NULL; }
 
     if (ActiveMap) {
         free(ActiveMap);
@@ -211,6 +213,7 @@ bool InitMap(uint8_t levelIndex) {
 
     wallTexture = LoadTextureFile("assets\\wall.bmp");
     BrickwallTexture = LoadTextureFile("assets\\brick_wall.bmp");
+    VentTexture = LoadTextureFile("assets\\vent.bmp");
 
     return TRUE;
 }

@@ -24,6 +24,7 @@ extern const int TILE_SIZE;
 extern MapTile *ActiveMap;
 extern uint32_t *wallTexture;
 extern uint32_t *BrickwallTexture;
+extern uint32_t *VentTexture;
 
 //--- Ray Structure Definition ---
 typedef struct {
@@ -109,6 +110,7 @@ int check_door_left_intersection(Ray *ray, int mapX, int mapY, float playerGridX
     return 0; // Miss!
 }
 
+//--- Main Rendering Function using DIB Section & 1D Map Array ---
 void render_game(DWORD *pixels, int width, int height) {
     if (width <= 0 || height <= 0) return;
 
@@ -188,10 +190,15 @@ void render_game(DWORD *pixels, int width, int height) {
             } else {
                 int tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
 
-                if (tileID == 4 || tileID == 1 || tileID == 2) {
-                    hit = 1; // Stop the ray for walls, traps, and transitions!
+                if (tileID == 4 || tileID == 1 || tileID == 2 || tileID == 5) {
+                    hit = 1;
                 } else if (tileID == 3) {
                     if (check_pillar_intersection(&ray, ray.mapX, ray.mapY, playerGridX, playerGridY, &pillarDist, &pillarSide)) {
+                        hit = 1;
+                        hitPillar = 1;
+                    }
+                } else if (tileID == 5) {
+                    if (check_door_left_intersection(&ray, ray.mapX, ray.mapY, playerGridX, playerGridY, &pillarDist, &pillarSide)) {
                         hit = 1;
                         hitPillar = 1;
                     }
@@ -242,6 +249,12 @@ void render_game(DWORD *pixels, int width, int height) {
                 } else {
                     wallX = (hitX - (ray.mapX + 0.35f)) / 0.30f;
                 }
+            } else if (tileID == 5) {
+                if (side == 0) {
+                    wallX = hitY - floorf(hitY);
+                } else {
+                    wallX = (hitX - (ray.mapX + 0.35f)) / 0.30f;
+                }
             }
         } else {
             if (side == 0) {
@@ -279,13 +292,20 @@ void render_game(DWORD *pixels, int width, int height) {
                     color = wallTexture[texY * 128 + texX];
                 }
             } else if (tileID == 1) {
-                // Trap tile (you can use BrickwallTexture or a dedicated trap texture)
                 if (BrickwallTexture) {
                     color = BrickwallTexture[texY * 128 + texX];
                 }
             } else if (tileID == 2) {
-                // Level transition tile (e.g., solid green or a transition texture)
-                color = 0x0032CD32; 
+                color = 0x0032CD32; // Solid green transition
+            } else if (tileID == 5) {
+                if (VentTexture) {
+                    color = VentTexture[texY * 128 + texX];
+                }
+            }
+
+            // Optional side-shading depth effect for horizontal/vertical walls
+            if (side == 1) {
+                color = (color >> 1) & 0x007F7F7F;
             }
 
             pixels[y * width + i] = color;
