@@ -19,11 +19,11 @@
     #define defDEBUG FALSE
 #endif
 
-int W_WIDTH = 800;
-int W_HEIGHT = 600;
+int W_WIDTH = 960;
+int W_HEIGHT = 540;
 int clientWidth = 0;
 int clientHeight = 0;
-bool STRETCH = FALSE;
+bool STRETCH = TRUE;
 const int TILE_SIZE = 50;
 bool isFocused = false;
 bool isCursorHidden = false;
@@ -35,6 +35,12 @@ uint8_t mapHeight = 0;
 size_t totalTiles = 0;
 uint8_t total_levels = 0;
 uint8_t LevelIndex = 0;
+
+HBITMAP g_memBitmap = NULL;
+HDC     g_memDC = NULL;
+void*   g_pBits = NULL;
+int     g_bufferWidth = 0;
+int     g_bufferHeight = 0;
 
 uint32_t *wallTexture = NULL;
 uint32_t *BrickwallTexture = NULL;
@@ -413,8 +419,10 @@ void StopGameAudio() {
 void UpdateCursorState() {
     if (isFocused) {
         if (!isCursorHidden) {
+            if (HIDE_CURSOR) {
             ShowCursor(FALSE);
             isCursorHidden = true;
+            }
         }
     } else {
         if (isCursorHidden) {
@@ -424,28 +432,31 @@ void UpdateCursorState() {
     }
 }
 
-HBITMAP CreateBlankDIB(HDC hdc, int width, int height, void** ppvBits) {
-    BITMAPINFO bmi;
+void ResizeGameBuffer(HWND hwnd, int newWidth, int newHeight) {
+    if (g_memBitmap) DeleteObject(g_memBitmap);
+    if (g_memDC) DeleteDC(g_memDC);
 
-    ZeroMemory(&bmi, sizeof(BITMAPINFO));
+    HDC hdc = GetDC(hwnd);
+    g_memDC = CreateCompatibleDC(hdc);
 
+    int renderWidth = STRETCH ? W_WIDTH : newWidth;
+    int renderHeight = STRETCH ? W_HEIGHT : newHeight;
+
+    g_bufferWidth = renderWidth;
+    g_bufferHeight = renderHeight;
+
+    BITMAPINFO bmi = {0};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = width;
-    bmi.bmiHeader.biHeight = -height;
+    bmi.bmiHeader.biWidth = renderWidth;
+    bmi.bmiHeader.biHeight = -renderHeight;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
 
-    HBITMAP hBitmap = CreateDIBSection(
-        hdc,
-        &bmi,
-        DIB_RGB_COLORS,
-        ppvBits,
-        NULL,
-        0
-    );
+    g_memBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &g_pBits, NULL, 0);
+    SelectObject(g_memDC, g_memBitmap);
 
-    return hBitmap;
+    ReleaseDC(hwnd, hdc);
 }
 
 void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, uint16_t y, bool center, HDC memDC, uint8_t tR, uint8_t tG, uint8_t tB, uint8_t bR, uint8_t bG, uint8_t bB, const int MODE) {
@@ -484,52 +495,28 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return 0;
         }
         case WM_ACTIVATE: {
-            if(HIDE_CURSOR) {
-                isFocused = (LOWORD(wParam) != WA_INACTIVE);
-                UpdateCursorState();
-            }
+            isFocused = (LOWORD(wParam) != WA_INACTIVE);
+            UpdateCursorState();
             return 0;
         }
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
 
-            if (clientWidth > 0 && clientHeight > 0) {
-                int renderWidth = STRETCH ? W_WIDTH : clientWidth;
-                int renderHeight = STRETCH ? W_HEIGHT : clientHeight;
-
-                void* ppvbits = NULL;
-                HBITMAP memBitmap = CreateBlankDIB(hdc, renderWidth, renderHeight, &ppvbits);
-
-                if (memBitmap && ppvbits) {
-                    HDC memDC = CreateCompatibleDC(hdc);
-                    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
-
-                    // Render game into our buffer
-                    render_game((DWORD*)ppvbits, renderWidth, renderHeight);
-
-                    if (Death) {
-                        drawText("YOU'RE DEAD!", "Terminal", 72, 0, 0, TRUE, memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
-                    }
-
-                    if (STRETCH) {
-                        SetStretchBltMode(hdc, HALFTONE);
-                        StretchBlt(
-                            hdc, 0, 0, clientWidth, clientHeight,
-                            memDC, 0, 0, W_WIDTH, W_HEIGHT,
-                            SRCCOPY
-                        );
-                    } else {
-                        BitBlt(
-                            hdc, 0, 0, clientWidth, clientHeight,
-                            memDC, 0, 0,
-                            SRCCOPY
-                        );
-                    }
-
-                    SelectObject(memDC, oldBitmap);
-                    DeleteDC(memDC);
-                    DeleteObject(memBitmap);
+            if (g_memDC && g_bufferWidth > 0 && g_bufferHeight > 0) {
+                if (STRETCH) {
+                    SetStretchBltMode(hdc, COLORONCOLOR);
+                    StretchBlt(
+                        hdc, 0, 0, clientWidth, clientHeight,
+                        g_memDC, 0, 0, W_WIDTH, W_HEIGHT,
+                        SRCCOPY
+                    );
+                } else {
+                    BitBlt(
+                        hdc, 0, 0, clientWidth, clientHeight,
+                        g_memDC, 0, 0,
+                        SRCCOPY
+                    );
                 }
             }
         EndPaint(hwnd, &ps);
@@ -538,6 +525,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         case WM_SIZE:
             clientWidth = LOWORD(lParam);
             clientHeight = HIWORD(lParam);
+            if (STRETCH) ResizeGameBuffer(hwnd, W_WIDTH, W_HEIGHT);
+            if (!STRETCH) ResizeGameBuffer(hwnd, clientWidth, clientHeight);
             return 0;
         default:
             return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -546,7 +535,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     if (strstr(lpCmdLine, "-s") != NULL) {
-            STRETCH = TRUE;
+            STRETCH = FALSE;
     }
 
     if (strstr(lpCmdLine, "-d") != NULL) {
@@ -554,11 +543,11 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     }
 
     if (strstr(lpCmdLine, "-c") != NULL) {
-            HIDE_CURSOR = TRUE;
+            HIDE_CURSOR = FALSE;
     }
 
     if (strstr(lpCmdLine, "--help") != NULL) {
-            printf("--help -> Prints help\n -s -> STRETCH=TRUE\n -c -> HIDE_CURSOR=TRUE\n -d -> DEBUG=TRUE\n -w int -> W_WIDTH\n -h int -> W_HEIGHT\n");
+            printf("--help -> Prints help\n -s -> STRETCH=FALSE\n -c -> HIDE_CURSOR=FALSE\n -d -> DEBUG=TRUE\n -w int -> W_WIDTH\n -h int -> W_HEIGHT\n");
     }
 
     char *lpWWidth = strstr(lpCmdLine, "-w");
@@ -570,7 +559,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     if (lpWHeight != NULL) {
         sscanf(lpWHeight, "-w %d", &W_WIDTH);
     }
-
 
 
 
@@ -614,6 +602,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
         return 0;
     }
 
+    if (STRETCH) ResizeGameBuffer(hwnd, W_WIDTH, W_HEIGHT);
+    if (!STRETCH) ResizeGameBuffer(hwnd, clientWidth, clientHeight);
+
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 
@@ -623,11 +614,18 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         } else {
-            if (isFocused) UpdateGame();
+            if (isFocused) {
+                UpdateGame();
+                if (g_pBits) {
+                    render_game((DWORD*)g_pBits, g_bufferWidth, g_bufferHeight);
+                    if (Death) {
+                        drawText("YOU'RE DEAD!", "Terminal", 72, 0, 0, TRUE, g_memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
+                   }
+                }
+            }
             InvalidateRect(hwnd, NULL, FALSE);
-            Sleep(16);
+            Sleep(20);
         }
     }
-
     return 0;
 }
