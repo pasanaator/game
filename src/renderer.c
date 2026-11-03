@@ -112,6 +112,31 @@ int check_door_left_intersection(Ray *ray, int mapX, int mapY, float playerGridX
     return 0; // Miss!
 }
 
+uint32_t apply_fog(uint32_t color, float distance, float maxDistance) {
+    // Calculate fog factor (0.0 = no fog, 1.0 = full fog)
+    float fogFactor = distance / maxDistance;
+    if (fogFactor > 1.0f) fogFactor = 1.0f;
+    if (fogFactor < 0.0f) fogFactor = 0.0f;
+
+    // Unpack RGB channels
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+
+    // Target fog color (matches your background: 0x18, 0x18, 0x18)
+    uint8_t fogR = 0x18;
+    uint8_t fogG = 0x18;
+    uint8_t fogB = 0x18;
+
+    // Linear interpolation between texture color and fog color
+    r = (uint8_t)(r * (1.0f - fogFactor) + fogR * fogFactor);
+    g = (uint8_t)(g * (1.0f - fogFactor) + fogG * fogFactor);
+    b = (uint8_t)(b * (1.0f - fogFactor) + fogB * fogFactor);
+
+    // Recombine into 32-bit color
+    return (r << 16) | (g << 8) | b;
+}
+
 //--- Main Rendering Function using DIB Section & 1D Map Array ---
 void render_game(DWORD *pixels, int width, int height) {
     if (width <= 0 || height <= 0) return;
@@ -307,6 +332,8 @@ void render_game(DWORD *pixels, int width, int height) {
             if (side == 1) {
                 color = (color >> 1) & 0x007F7F7F;
             }
+
+            color = apply_fog(color, perpWallDist, 7.0f);
 
             pixels[y * width + i] = color;
         }
