@@ -188,8 +188,10 @@ bool LoadMapFromFile(const char *filename, uint16_t level_index, MapTile **dest_
 }
 
 void UnloadMap() {
+    if (wallTexture) {
     free(wallTexture);
     wallTexture = NULL;
+    }
 
     if (ActiveMap) {
         free(ActiveMap);
@@ -197,14 +199,14 @@ void UnloadMap() {
     }
 }
 
-bool InitMap(uint8_t LevelIndex) {
-    if (LevelIndex > total_levels) {
+bool InitMap(uint8_t levelIndex) {
+    if (levelIndex > total_levels) {
         perror("Invalid level index");
         return FALSE;
     }
 
     UnloadMap();
-    if (!LoadMapFromFile(FILENAME, LevelIndex, &ActiveMap)) {
+    if (!LoadMapFromFile(FILENAME, levelIndex, &ActiveMap)) {
         return FALSE;
     }
 
@@ -231,20 +233,20 @@ bool Death = FALSE;
 
 void UpdateGame() {
 
-    if (GetAsyncKeyState('0') & 0x8000) InitMap(0);
-    if (GetAsyncKeyState('1') & 0x8000) InitMap(1);
-    if (GetAsyncKeyState('2') & 0x8000) InitMap(2);
-    if (GetAsyncKeyState('3') & 0x8000) InitMap(3);
-    if (GetAsyncKeyState('4') & 0x8000) InitMap(4);
-
     player.movement.dirX = 0.0f;
     player.movement.dirY = 0.0f;
 
     float forward = 0.0f;
     float strafe  = 0.0f;
-
     float rotSpeed = 0.05f;
+
     if (!Death) {
+        if (GetAsyncKeyState('0') & 0x8000) InitMap(LevelIndex = 0);
+        if (GetAsyncKeyState('1') & 0x8000) InitMap(LevelIndex = 1);
+        if (GetAsyncKeyState('2') & 0x8000) InitMap(LevelIndex = 2);
+        if (GetAsyncKeyState('3') & 0x8000) InitMap(LevelIndex = 3);
+        if (GetAsyncKeyState('4') & 0x8000) InitMap(LevelIndex = 4);
+
         if (GetAsyncKeyState(VK_LEFT) & 0x8000)  player.angle -= rotSpeed;
         if (GetAsyncKeyState(VK_RIGHT) & 0x8000) player.angle += rotSpeed;
 
@@ -307,6 +309,9 @@ void UpdateGame() {
             if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isDeadly) {
                 Death = TRUE;
             }
+            if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isLevelTransition) {
+                InitMap(LevelIndex++);
+            }
             if (!(tileTop >= 1 && tileBot >= 1)) {
                 player.x = newX;
             }
@@ -325,6 +330,9 @@ void UpdateGame() {
             int tileRight = ActiveMap[checkGridY * mapWidth + rightGridX].tile;
             if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isDeadly) {
                 Death = TRUE;
+            }
+            if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isLevelTransition) {
+                InitMap(LevelIndex++);
             }
             if (!(tileLeft >= 1 && tileRight >= 1)) {
                 player.y = newY;

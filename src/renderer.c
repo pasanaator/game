@@ -257,7 +257,7 @@ void render_game(DWORD *pixels, int width, int height) {
 
             // Sample color from your loaded wall.bmp texture
             uint32_t color;
-            if (wallTexture) {
+            if (wallTexture && (tileID != 3)) {
                 color = wallTexture[texY * 128 + texX];
             } else {
                 // Fallback solid color if texture failed to load

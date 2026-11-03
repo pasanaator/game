@@ -37,12 +37,13 @@ typedef struct {
 #define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false }
 #define W  { .tile = 1, .isDeadly = false, .isLevelTransition = false }
 #define K  { .tile = 2, .isDeadly = true, .isLevelTransition = false }
+#define T  { .tile = 3, .isDeadly = false, .isLevelTransition = true }
 #define P  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
 
 static const MapTile maps[][MAX_TILES] = {
     {
         W, W, W, W, W, W, W, W, W,
-        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, _, _, _, T, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, P, _, P, _, _, W,
         W, _, _, _, _, _, _, _, W,
@@ -61,7 +62,7 @@ static const MapTile maps[][MAX_TILES] = {
         W, _, W, W, _, W, W, _, W,
         W, _, W, _, _, _, W, _, W,
         W, _, W, _, _, _, W, _, W,
-        W, _, W, _, _, _, W, _, W,
+        W, _, W, _, T, _, W, _, W,
         W, _, W, _, _, _, W, _, W,
         W, _, W, W, W, W, W, _, W,
         W, _, _, _, _, _, _, _, W,
@@ -79,7 +80,7 @@ static const MapTile maps[][MAX_TILES] = {
         W, _, W, W, W, _, _, _, W,
         W, _, _, _, W, W, W, _, W,
         W, W, W, _, W, _, W, _, W,
-        W, _, _, _, _, _, W, _, W,
+        W, _, _, _, _, _, W, T, W,
         W, W, W, W, W, W, W, W, W,
     },
     {
@@ -92,7 +93,7 @@ static const MapTile maps[][MAX_TILES] = {
         W, _, _, _, _, _, _, _, W,
         W, _, _, _, P, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, W,
+        W, _, _, _, T, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
         W, W, W, W, W, W, W, W, W,
     },
