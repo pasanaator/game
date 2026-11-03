@@ -31,13 +31,17 @@ typedef struct {
 } MapHeader;
 
 #pragma pack(pop)
-
+// Solid Walls
 #define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false }
-#define W  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
 #define P  { .tile = 3, .isDeadly = false, .isLevelTransition = false }
+#define W  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
+#define V  { .tile = 5, .isDeadly = false, .isLevelTransition = false }
+// Deadly walls
 #define K  { .tile = 1, .isDeadly = true, .isLevelTransition = false }
+// Level Transitions
 #define T  { .tile = 2, .isDeadly = false, .isLevelTransition = true }
-#define V  { .tile = 5, .isDeadly = false, .isLevelTransition = true }
+
+
 
 static const MapTile maps[][MAX_TILES] = {
     {

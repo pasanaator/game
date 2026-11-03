@@ -292,11 +292,9 @@ void render_game(DWORD *pixels, int width, int height) {
                     color = wallTexture[texY * 128 + texX];
                 }
             } else if (tileID == 1) {
-                if (BrickwallTexture) {
-                    color = BrickwallTexture[texY * 128 + texX];
-                }
+                color = 0x00AF3232;
             } else if (tileID == 2) {
-                color = 0x0032CD32; // Solid green transition
+                color = 0x00CDCD23;
             } else if (tileID == 5) {
                 if (VentTexture) {
                     color = VentTexture[texY * 128 + texX];
