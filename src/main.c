@@ -15,13 +15,19 @@
 #define MAP_VERSION 1
 #define FILENAME "assets\\level.gmap"
 
+#ifndef defDEBUG
+    #define defDEBUG FALSE
+#endif
+
 int W_WIDTH = 800;
 int W_HEIGHT = 600;
-bool STRETCH = FALSE;
-
 int clientWidth = 0;
 int clientHeight = 0;
+bool STRETCH = FALSE;
 const int TILE_SIZE = 50;
+bool isFocused = false;
+bool isCursorHidden = false;
+bool DEBUG = defDEBUG;
 
 uint8_t mapWidth = 0;
 uint8_t mapHeight = 0;
@@ -218,6 +224,30 @@ bool InitMap(uint8_t levelIndex) {
     return TRUE;
 }
 
+typedef struct {
+    bool isColliding;
+    bool isDeadly;
+    bool isLevelTransition;
+} Collision;
+
+Collision coll = {NULL};
+
+Collision isColliding(float x, float y, float r) {
+    int left   = (int)floorf((x - r) / TILE_SIZE);
+    int right  = (int)floorf((x + r) / TILE_SIZE);
+    int top    = (int)floorf((y - r) / TILE_SIZE);
+    int bottom = (int)floorf((y + r) / TILE_SIZE);
+
+    Collision fColl = {NULL};
+    if (ActiveMap[top * mapWidth + left].tile > 1 || ActiveMap[top * mapWidth + right].tile > 1 || ActiveMap[bottom * mapWidth + left].tile > 1 || ActiveMap[bottom * mapWidth + right].tile > 1)
+        fColl.isColliding = TRUE;
+    if (ActiveMap[top * mapWidth + left].isDeadly || ActiveMap[top * mapWidth + right].isDeadly || ActiveMap[bottom * mapWidth + left].isDeadly || ActiveMap[bottom * mapWidth + right].isDeadly)
+        fColl.isDeadly = TRUE;
+    if (ActiveMap[top * mapWidth + left].isLevelTransition || ActiveMap[top * mapWidth + right].isLevelTransition || ActiveMap[bottom * mapWidth + left].isLevelTransition || ActiveMap[bottom * mapWidth + right].isLevelTransition)
+        fColl.isLevelTransition = TRUE;
+    return fColl;
+}
+
 Player player = {
     .x = 3.0f * TILE_SIZE,
     .y = 2.0f * TILE_SIZE,
@@ -244,11 +274,13 @@ void UpdateGame() {
     float rotSpeed = 0.05f;
 
     if (!Death) {
-        if (GetAsyncKeyState('0') & 0x8000) InitMap(LevelIndex = 0);
-        if (GetAsyncKeyState('1') & 0x8000) InitMap(LevelIndex = 1);
-        if (GetAsyncKeyState('2') & 0x8000) InitMap(LevelIndex = 2);
-        if (GetAsyncKeyState('3') & 0x8000) InitMap(LevelIndex = 3);
-        if (GetAsyncKeyState('4') & 0x8000) InitMap(LevelIndex = 4);
+        if(DEBUG) {
+            if (GetAsyncKeyState('0') & 0x8000) InitMap(LevelIndex = 0);
+            if (GetAsyncKeyState('1') & 0x8000) InitMap(LevelIndex = 1);
+            if (GetAsyncKeyState('2') & 0x8000) InitMap(LevelIndex = 2);
+            if (GetAsyncKeyState('3') & 0x8000) InitMap(LevelIndex = 3);
+            if (GetAsyncKeyState('4') & 0x8000) InitMap(LevelIndex = 4);
+        }
 
         if (GetAsyncKeyState(VK_LEFT) & 0x8000)  player.angle -= rotSpeed;
         if (GetAsyncKeyState(VK_RIGHT) & 0x8000) player.angle += rotSpeed;
@@ -299,52 +331,29 @@ void UpdateGame() {
     float newX = player.x + moveDeltaX;
     float newY = player.y + moveDeltaY;
 
-    // X-axis movement + collision
-    if (moveDeltaX != 0.0f) {
-        float offsetX = (moveDeltaX > 0.0f) ? radius : -radius;
-        int checkGridX = (int)((newX + offsetX) / (float)TILE_SIZE);
-        int topGridY   = (int)((player.y - radius * 0.5f) / (float)TILE_SIZE);
-        int botGridY   = (int)((player.y + radius * 0.5f) / (float)TILE_SIZE);
-
-        if (checkGridX >= 0 && checkGridX < mapWidth && topGridY >= 0 && botGridY < mapHeight) {
-            int tileTop = ActiveMap[topGridY * mapWidth + checkGridX].tile;
-            int tileBot = ActiveMap[botGridY * mapWidth + checkGridX].tile;
-            if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isDeadly) {
-                Death = TRUE;
-            }
-            if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isLevelTransition) {
-                InitMap(LevelIndex++);
-            }
-            if (!(tileTop >= 1 && tileBot >= 1)) {
-                player.x = newX;
-            }
+    // Collision
+    if (moveDeltaX != 0.0f || moveDeltaY != 0.0f) {
+        // --- X-Axis Movement ---
+        float oldX = player.x;
+        player.x = newX;
+        if (isColliding(player.x, player.y, radius).isColliding) {
+            player.x = oldX; // Safe: never lets you tunnel through X walls
         }
-    }
 
-    // Y-axis movement + collision
-    if (moveDeltaY != 0.0f) {
-        float offsetY = (moveDeltaY > 0.0f) ? radius : -radius;
-        int checkGridY = (int)((newY + offsetY) / (float)TILE_SIZE);
-        int leftGridX  = (int)((player.x - radius * 0.5f) / (float)TILE_SIZE);
-        int rightGridX = (int)((player.x + radius * 0.5f) / (float)TILE_SIZE);
-
-        if (leftGridX >= 0 && rightGridX < mapWidth && checkGridY >= 0 && checkGridY < mapHeight) {
-            int tileLeft  = ActiveMap[checkGridY * mapWidth + leftGridX].tile;
-            int tileRight = ActiveMap[checkGridY * mapWidth + rightGridX].tile;
-            if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isDeadly) {
-                Death = TRUE;
-            }
-            if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isLevelTransition) {
-                InitMap(LevelIndex++);
-            }
-            if (!(tileLeft >= 1 && tileRight >= 1)) {
-                player.y = newY;
-            }
+        // --- Y-Axis Movement ---
+        float oldY = player.y;
+        player.y = newY;
+        coll = isColliding(player.x, player.y, radius);
+        if (coll.isColliding) {
+            player.y = oldY; // Safe: never lets you tunnel through Y walls
         }
+        if (coll.isDeadly) Death = TRUE;
+        if (coll.isLevelTransition) InitMap(LevelIndex++);
     }
+    
 
-    float maxWorldX = (float)(mapWidth * TILE_SIZE) - 1.0f;
-    float maxWorldY = (float)(mapHeight * TILE_SIZE) - 1.0f;
+    float maxWorldX = ((float)(mapWidth * TILE_SIZE) - 1.0f);
+    float maxWorldY = ((float)(mapHeight * TILE_SIZE) - 1.0f);
 
     if (player.x < 1.0f) player.x = 1.0f;
     else if (player.x > maxWorldX) player.x = maxWorldX;
@@ -392,6 +401,20 @@ void PlayGameAudio(const TCHAR* filePath, int volumeLevel) {
 void StopGameAudio() {
     mciSendString(TEXT("stop backgroundAudio"), NULL, 0, NULL);
     mciSendString(TEXT("close backgroundAudio"), NULL, 0, NULL);
+}
+
+void UpdateCursorState() {
+    if (isFocused) {
+        if (!isCursorHidden) {
+            ShowCursor(FALSE);
+            isCursorHidden = true;
+        }
+    } else {
+        if (isCursorHidden) {
+            ShowCursor(TRUE);
+            isCursorHidden = false;
+        }
+    }
 }
 
 HBITMAP CreateBlankDIB(HDC hdc, int width, int height, void** ppvBits) {
@@ -442,12 +465,22 @@ void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, 
     DeleteObject(hFont);
 }
 
+
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-        case WM_DESTROY:
+        case WM_DESTROY: {
+            if (isCursorHidden) ShowCursor(TRUE);
+            ClipCursor(NULL);
             StopGameAudio();
             PostQuitMessage(0);
             return 0;
+        }
+        case WM_ACTIVATE: {
+            isFocused = (LOWORD(wParam) != WA_INACTIVE);
+            UpdateCursorState();
+            return 0;
+        }
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
@@ -503,13 +536,30 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 }
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    if (__argc >= 4) {
-        W_WIDTH = atoi(__argv[1]);
-        W_HEIGHT = atoi(__argv[2]);
-        if (__argv[3]) {
-            STRETCH == TRUE;
-        }
+    if (strstr(lpCmdLine, "-s") != NULL) {
+            STRETCH = TRUE;
     }
+
+    if (strstr(lpCmdLine, "-d") != NULL) {
+            DEBUG = TRUE;
+    }
+
+    if (strstr(lpCmdLine, "--help") != NULL) {
+            printf("--help -> Prints help\n -s -> STRETCH=TRUE\n -d -> DEBUG=TRUE\n -w int -> W_WIDTH\n -h int -> W_HEIGHT\n");
+    }
+
+    char *lpWWidth = strstr(lpCmdLine, "-w");
+    if (lpWWidth != NULL) {
+        sscanf(lpWWidth, "-w %d", &W_WIDTH);
+    }
+
+    char *lpWHeight = strstr(lpCmdLine, "-h");
+    if (lpWHeight != NULL) {
+        sscanf(lpWHeight, "-w %d", &W_WIDTH);
+    }
+
+
+
 
     PlayGameAudio("assets\\backround.mp3", AUDIO_VOLUME);
     if (!InitMap(0)) return 0;
@@ -560,7 +610,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         } else {
-            UpdateGame();
+            if (isFocused) UpdateGame();
             InvalidateRect(hwnd, NULL, FALSE);
             Sleep(16);
         }
