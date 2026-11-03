@@ -415,7 +415,7 @@ HBITMAP CreateBlankDIB(HDC hdc, int width, int height, void** ppvBits) {
     return hBitmap;
 }
 
-void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, uint16_t y, HDC hdc, HDC memDC, uint8_t tR, uint8_t tG, uint8_t tB, uint8_t bR, uint8_t bG, uint8_t bB, const int MODE) {
+void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, uint16_t y, bool center, HDC memDC, uint8_t tR, uint8_t tG, uint8_t tB, uint8_t bR, uint8_t bG, uint8_t bB, const int MODE) {
     SetTextColor(memDC, RGB(tR, tG, tB));
     SetBkColor(memDC, RGB(bR, bG, bB));
     SetBkMode(memDC, MODE);
@@ -426,6 +426,13 @@ void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, 
     CLEARTYPE_QUALITY, VARIABLE_PITCH, font
     );
     HFONT hOldFont = (HFONT)SelectObject(memDC, hFont);
+
+    if (center) {
+    SIZE textSize;
+    GetTextExtentPoint32(memDC, text, (int)strlen(text), &textSize);
+    x = (clientWidth - textSize.cx) / 2;
+    y = (clientHeight - textSize.cy) / 2;
+    }
 
     TextOut(memDC, x, y, text , strlen(text));
     SelectObject(memDC, hOldFont);
@@ -457,7 +464,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     render_game((DWORD*)ppvbits, renderWidth, renderHeight);
 
                     if (Death) {
-                        drawText("YOU'RE DEAD!", "Terminal", 56, clientWidth / 2, clientHeight / 2, hdc, memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
+                        drawText("YOU'RE DEAD!", "Terminal", 72, 0, 0, TRUE, memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
                     }
 
                     if (STRETCH) {
