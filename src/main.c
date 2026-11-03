@@ -276,6 +276,7 @@ Player player = {
 };
 
 bool Death = FALSE;
+bool Sprint = FALSE;
 
 void UpdateGame() {
 
@@ -302,6 +303,10 @@ void UpdateGame() {
         if (GetAsyncKeyState('S') & 0x8000) forward -= 1.0f;
         if (GetAsyncKeyState('D') & 0x8000) strafe  += 1.0f;
         if (GetAsyncKeyState('A') & 0x8000) strafe  -= 1.0f;
+
+        Sprint = (GetAsyncKeyState(VK_SHIFT) & 0x8000) ? TRUE : FALSE;
+        if (Sprint) { player.movement.maxAcceleration = 2.2f; player.movement.accelerationGrowth = 0.045f; player.movement.speed = 0.6f;}
+        if (!Sprint) { player.movement.maxAcceleration = 2.0f; player.movement.accelerationGrowth = 0.04f; player.movement.speed = 0.5f;}
     }
 
     if (forward != 0.0f && strafe != 0.0f) {
