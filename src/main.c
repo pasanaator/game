@@ -28,6 +28,7 @@ const int TILE_SIZE = 50;
 bool isFocused = false;
 bool isCursorHidden = false;
 bool DEBUG = defDEBUG;
+bool HIDE_CURSOR = TRUE;
 
 uint8_t mapWidth = 0;
 uint8_t mapHeight = 0;
@@ -483,8 +484,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             return 0;
         }
         case WM_ACTIVATE: {
-            isFocused = (LOWORD(wParam) != WA_INACTIVE);
-            UpdateCursorState();
+            if(HIDE_CURSOR) {
+                isFocused = (LOWORD(wParam) != WA_INACTIVE);
+                UpdateCursorState();
+            }
             return 0;
         }
         case WM_PAINT: {
@@ -550,8 +553,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
             DEBUG = TRUE;
     }
 
+    if (strstr(lpCmdLine, "-c") != NULL) {
+            HIDE_CURSOR = TRUE;
+    }
+
     if (strstr(lpCmdLine, "--help") != NULL) {
-            printf("--help -> Prints help\n -s -> STRETCH=TRUE\n -d -> DEBUG=TRUE\n -w int -> W_WIDTH\n -h int -> W_HEIGHT\n");
+            printf("--help -> Prints help\n -s -> STRETCH=TRUE\n -c -> HIDE_CURSOR=TRUE\n -d -> DEBUG=TRUE\n -w int -> W_WIDTH\n -h int -> W_HEIGHT\n");
     }
 
     char *lpWWidth = strstr(lpCmdLine, "-w");
