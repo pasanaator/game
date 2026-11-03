@@ -229,12 +229,17 @@ void render_game(DWORD *pixels, int width, int height) {
             lineHeight = (int)(lineHeight * 1.8f);
         }
 
-        int drawStart = -lineHeight / 2 + height / 2;
+        // 1. Keep the true, unclipped start position for proper texture mapping
+        int realDrawStart = -lineHeight / 2 + height / 2;
+
+        // 2. Clamp screen drawing bounds so we don't write outside the pixel buffer
+        int drawStart = realDrawStart;
         if (drawStart < 0) drawStart = 0;
+        
         int drawEnd = lineHeight / 2 + height / 2;
         if (drawEnd >= height) drawEnd = height - 1;
 
-        //--- 1. Calculate Texture Coordinates ---
+        //--- 3. Calculate Texture Coordinates ---
         float wallX;
         if (side == 0) {
             wallX = playerGridY + perpWallDist * ray.rayDirY;
@@ -248,19 +253,18 @@ void render_game(DWORD *pixels, int width, int height) {
         if (side == 0 && ray.rayDirX > 0) texX = 128 - texX - 1;
         if (side == 1 && ray.rayDirY < 0) texX = 128 - texX - 1;
 
-        //--- 2. Draw Vertical Column Using Texture Sampling ---
+        //--- 4. Draw Vertical Column Using Texture Sampling ---
         for (int y = drawStart; y <= drawEnd; y++) {
-            // Scale screen pixel Y position to match the 128-pixel texture height
-            int texY = (y - drawStart) * 128 / lineHeight;
+            // Use realDrawStart here so off-screen portions map correctly when close!
+            int texY = (y - realDrawStart) * 128 / lineHeight;
             if (texY < 0) texY = 0;
             if (texY >= 128) texY = 127;
 
             // Sample color from your loaded wall.bmp texture
-            uint32_t color;
-            if (wallTexture && (tileID != 3)) {
+            unsigned int color;
+            if (wallTexture) {
                 color = wallTexture[texY * 128 + texX];
             } else {
-                // Fallback solid color if texture failed to load
                 color = (tileID == 2) ? 0x0032CD32 : 0x00CD5C5C; 
             }
 
