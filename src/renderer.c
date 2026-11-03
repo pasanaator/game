@@ -189,14 +189,15 @@ void render_game(DWORD *pixels, int width, int height) {
             } else {
                 int tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
 
-                if (tileID == 1 || tileID == 4) {
+                if (tileID == 1 || tileID == 4 || tileID == 2) {
                     hit = 1;
                 } else if (tileID == 3) {
                     if (check_pillar_intersection(&ray, ray.mapX, ray.mapY, playerGridX, playerGridY, &pillarDist, &pillarSide)) {
                         hit = 1;
                         hitPillar = 1;
                     }
-                } else if (tileID == 2) {
+                    // See kood siin tuleks üle vaadata
+                }  else if (tileID == 5) {
                     if (check_door_left_intersection(&ray, ray.mapX, ray.mapY, playerGridX, playerGridY, &pillarDist, &pillarSide)) {
                         hit = 1;
                         hitPillar = 1;
@@ -225,7 +226,7 @@ void render_game(DWORD *pixels, int width, int height) {
 
         //--- Calculate Height of Wall Strip ---
         int lineHeight = (int)(height / perpWallDist);
-        if (tileID == 3) {
+        if (tileID == 4) {
             lineHeight = (int)(lineHeight * 1.8f);
         }
 
@@ -261,11 +262,13 @@ void render_game(DWORD *pixels, int width, int height) {
             if (texY >= 128) texY = 127;
 
             // Sample color from your loaded wall.bmp texture
-            unsigned int color;
-            if (wallTexture) {
+            uint32_t color;
+            if (wallTexture && (tileID >= 3)) {
                 color = wallTexture[texY * 128 + texX];
             } else {
-                color = (tileID == 2) ? 0x0032CD32 : 0x00CD5C5C; 
+                // Fallback solid color if texture failed to load
+                if(tileID == 1) color = 0x00CD5C5C; 
+                if(tileID == 2) color = 0x0032CD32;
             }
 
             // Optional side-shading depth effect for horizontal/vertical walls

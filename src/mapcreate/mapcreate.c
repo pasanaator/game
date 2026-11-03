@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <windows.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -35,10 +33,10 @@ typedef struct {
 #pragma pack(pop)
 
 #define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false }
-#define W  { .tile = 1, .isDeadly = false, .isLevelTransition = false }
-#define K  { .tile = 2, .isDeadly = true, .isLevelTransition = false }
-#define T  { .tile = 3, .isDeadly = false, .isLevelTransition = true }
-#define P  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
+#define W  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
+#define P  { .tile = 3, .isDeadly = false, .isLevelTransition = false }
+#define K  { .tile = 1, .isDeadly = true, .isLevelTransition = false }
+#define T  { .tile = 2, .isDeadly = false, .isLevelTransition = true }
 
 static const MapTile maps[][MAX_TILES] = {
     {
