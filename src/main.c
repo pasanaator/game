@@ -552,7 +552,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     }
 
     if (strstr(lpCmdLine, "--help") != NULL) {
-            printf("--help -> Prints help\n -s -> STRETCH=FALSE\n -c -> HIDE_CURSOR=FALSE\n -d -> DEBUG=TRUE\n -w int -> W_WIDTH\n -h int -> W_HEIGHT\n");
+        MessageBoxA(NULL, "--help -> Prints help\n-s -> STRETCH=FALSE\n-c -> HIDE_CURSOR=FALSE\n-d -> DEBUG=TRUE\n-w int -> W_WIDTH\n-h int -> W_HEIGHT", "Help", MB_OK | MB_ICONINFORMATION);
+        return 0;
     }
 
     char *lpWWidth = strstr(lpCmdLine, "-w");
