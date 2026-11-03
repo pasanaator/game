@@ -25,6 +25,8 @@ extern MapTile *ActiveMap;
 extern uint32_t *wallTexture;
 extern uint32_t *BrickwallTexture;
 extern uint32_t *VentTexture;
+extern uint32_t *FloorTexture;
+extern uint32_t *CeillingTexture;
 
 //--- Ray Structure Definition ---
 typedef struct {
@@ -300,12 +302,56 @@ void render_game(DWORD *pixels, int width, int height) {
                     color = VentTexture[texY * 128 + texX];
                 }
             }
-
+            
             // Optional side-shading depth effect for horizontal/vertical walls
             if (side == 1) {
                 color = (color >> 1) & 0x007F7F7F;
             }
 
+            pixels[y * width + i] = color;
+        }
+        for (int y = drawEnd + 1; y < height; y++) {
+            float rowDistance = (0.5f * (float)height) / ((float)y - (float)height * 0.5f);
+
+            float floorX = playerGridX + rowDistance * ray.rayDirX;
+            float floorY = playerGridY + rowDistance * ray.rayDirY;
+
+            int floorTexX = (int)(128.0f * (floorX - floorf(floorX))) & 127;
+            int floorTexY = (int)(128.0f * (floorY - floorf(floorY))) & 127;
+
+            uint32_t color = 0x00282828;
+            if(FloorTexture) {
+                color = FloorTexture[floorTexY * 128 + floorTexX];
+            }
+            color = (color >> 1) & 0x007F7F7F;
+
+            pixels[y * width + i] = color;
+        }
+        for (int y = 0; y < drawStart; y++) {
+            
+            float rowDistance = (0.5f * (float)height) / ((float)height * 0.5f - (float)y);
+
+            float ceillingX = playerGridX + rowDistance * ray.rayDirX;
+            float ceillingY = playerGridY + rowDistance * ray.rayDirY;
+
+            int mapX = (int)floorf(ceillingX);
+            int mapY = (int)floorf(ceillingY);
+
+            uint32_t color = 0x00181818;
+
+            if (mapX >= 0 && mapX < (int)mapWidth && mapY >= 0 && mapY < (int)mapHeight) {
+                int ceillingTileID = ActiveMap[mapY * mapWidth + mapX].tile;
+
+                int texX = (int)(128.0f * (ceillingX - floorf(ceillingX))) & 127;
+                int texY = (int)(128.0f * (ceillingY - floorf(ceillingY))) & 127;
+
+                
+                if (CeillingTexture) {
+                    color = CeillingTexture[texY * 128 + texX];
+                }
+
+
+            }
             pixels[y * width + i] = color;
         }
     }
