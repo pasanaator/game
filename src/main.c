@@ -13,7 +13,7 @@
 #define AUDIO_VOLUME 125
 
 #define MAP_VERSION 1
-#define FILENAME "assets\\test.gmap"
+#define FILENAME "assets\\level.gmap"
 
 int W_WIDTH = 800;
 int W_HEIGHT = 600;
@@ -30,6 +30,8 @@ uint8_t total_levels = 0;
 uint8_t LevelIndex = 0;
 
 uint32_t *wallTexture = NULL;
+uint32_t *BrickwallTexture = NULL;
+uint32_t *VentTexture = NULL;
 
 typedef struct {
     float speed, currentSpeed, acceleration, maxAcceleration, accelerationGrowth, decelerationRate, dirY, dirX;
@@ -188,8 +190,9 @@ bool LoadMapFromFile(const char *filename, uint16_t level_index, MapTile **dest_
 }
 
 void UnloadMap() {
-    free(wallTexture);
-    wallTexture = NULL;
+    if (wallTexture) { free(wallTexture); wallTexture = NULL; }
+    if (BrickwallTexture) { free(BrickwallTexture); BrickwallTexture = NULL; }
+    if (VentTexture) { free(VentTexture); VentTexture = NULL; }
 
     if (ActiveMap) {
         free(ActiveMap);
@@ -197,18 +200,20 @@ void UnloadMap() {
     }
 }
 
-bool InitMap(uint8_t LevelIndex) {
-    if (LevelIndex > total_levels) {
+bool InitMap(uint8_t levelIndex) {
+    if (levelIndex > total_levels) {
         perror("Invalid level index");
         return FALSE;
     }
 
     UnloadMap();
-    if (!LoadMapFromFile(FILENAME, LevelIndex, &ActiveMap)) {
+    if (!LoadMapFromFile(FILENAME, levelIndex, &ActiveMap)) {
         return FALSE;
     }
 
-//    wallTexture = LoadTextureFile("assets\\wall.bmp"); Disabled until proper renmderer has been implemented
+    wallTexture = LoadTextureFile("assets\\wall.bmp");
+    BrickwallTexture = LoadTextureFile("assets\\brick_wall.bmp");
+    VentTexture = LoadTextureFile("assets\\vent.bmp");
 
     return TRUE;
 }
@@ -231,20 +236,20 @@ bool Death = FALSE;
 
 void UpdateGame() {
 
-    if (GetAsyncKeyState('0') & 0x8000) InitMap(0);
-    if (GetAsyncKeyState('1') & 0x8000) InitMap(1);
-    if (GetAsyncKeyState('2') & 0x8000) InitMap(2);
-    if (GetAsyncKeyState('3') & 0x8000) InitMap(3);
-    if (GetAsyncKeyState('4') & 0x8000) InitMap(4);
-
     player.movement.dirX = 0.0f;
     player.movement.dirY = 0.0f;
 
     float forward = 0.0f;
     float strafe  = 0.0f;
-
     float rotSpeed = 0.05f;
+
     if (!Death) {
+        if (GetAsyncKeyState('0') & 0x8000) InitMap(LevelIndex = 0);
+        if (GetAsyncKeyState('1') & 0x8000) InitMap(LevelIndex = 1);
+        if (GetAsyncKeyState('2') & 0x8000) InitMap(LevelIndex = 2);
+        if (GetAsyncKeyState('3') & 0x8000) InitMap(LevelIndex = 3);
+        if (GetAsyncKeyState('4') & 0x8000) InitMap(LevelIndex = 4);
+
         if (GetAsyncKeyState(VK_LEFT) & 0x8000)  player.angle -= rotSpeed;
         if (GetAsyncKeyState(VK_RIGHT) & 0x8000) player.angle += rotSpeed;
 
@@ -307,6 +312,9 @@ void UpdateGame() {
             if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isDeadly) {
                 Death = TRUE;
             }
+            if (ActiveMap[topGridY * mapWidth + checkGridX].isDeadly || ActiveMap[botGridY * mapWidth + checkGridX].isLevelTransition) {
+                InitMap(LevelIndex++);
+            }
             if (!(tileTop >= 1 && tileBot >= 1)) {
                 player.x = newX;
             }
@@ -325,6 +333,9 @@ void UpdateGame() {
             int tileRight = ActiveMap[checkGridY * mapWidth + rightGridX].tile;
             if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isDeadly) {
                 Death = TRUE;
+            }
+            if (ActiveMap[checkGridY * mapWidth + leftGridX].isDeadly || ActiveMap[checkGridY * mapWidth + rightGridX].isLevelTransition) {
+                InitMap(LevelIndex++);
             }
             if (!(tileLeft >= 1 && tileRight >= 1)) {
                 player.y = newY;
@@ -407,7 +418,7 @@ HBITMAP CreateBlankDIB(HDC hdc, int width, int height, void** ppvBits) {
     return hBitmap;
 }
 
-void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, uint16_t y, HDC hdc, HDC memDC, uint8_t tR, uint8_t tG, uint8_t tB, uint8_t bR, uint8_t bG, uint8_t bB, const int MODE) {
+void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, uint16_t y, bool center, HDC memDC, uint8_t tR, uint8_t tG, uint8_t tB, uint8_t bR, uint8_t bG, uint8_t bB, const int MODE) {
     SetTextColor(memDC, RGB(tR, tG, tB));
     SetBkColor(memDC, RGB(bR, bG, bB));
     SetBkMode(memDC, MODE);
@@ -418,6 +429,13 @@ void drawText(const char *text, const char *font, uint8_t fontSize, uint16_t x, 
     CLEARTYPE_QUALITY, VARIABLE_PITCH, font
     );
     HFONT hOldFont = (HFONT)SelectObject(memDC, hFont);
+
+    if (center) {
+    SIZE textSize;
+    GetTextExtentPoint32(memDC, text, (int)strlen(text), &textSize);
+    x = (clientWidth - textSize.cx) / 2;
+    y = (clientHeight - textSize.cy) / 2;
+    }
 
     TextOut(memDC, x, y, text , strlen(text));
     SelectObject(memDC, hOldFont);
@@ -449,7 +467,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     render_game((DWORD*)ppvbits, renderWidth, renderHeight);
 
                     if (Death) {
-                        drawText("YOU'RE DEAD!", "Terminal", 56, clientWidth / 2, clientHeight / 2, hdc, memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
+                        drawText("YOU'RE DEAD!", "Terminal", 72, 0, 0, TRUE, memDC, 255, 0, 0, 0, 0, 0, OPAQUE);
                     }
 
                     if (STRETCH) {
@@ -494,9 +512,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     }
 
     PlayGameAudio("assets\\backround.mp3", AUDIO_VOLUME);
-    if (!InitMap(0)) return 1;
+    if (!InitMap(0)) return 0;
 
-    const char CLASS_NAME[] = "Test";
+    const char CLASS_NAME[] = "Game";
 
     WNDCLASSA wc = { 0 };
     wc.lpfnWndProc   = WindowProc;
@@ -518,7 +536,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     HWND hwnd = CreateWindowExA(
         0,
         CLASS_NAME,
-        "Test",
+        "Game",
         style,
         CW_USEDEFAULT, CW_USEDEFAULT,
         wr.right - wr.left,

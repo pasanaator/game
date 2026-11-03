@@ -9,7 +9,7 @@
 typedef struct {
     uint8_t tile;
     bool isDeadly : 1;
-    bool pad1 : 1;
+    bool isLevelTransition : 1;
     bool pad2 : 1;
     bool pad3 : 1;
     bool pad4 : 1;
@@ -22,6 +22,9 @@ extern uint8_t mapWidth;
 extern uint8_t mapHeight;
 extern const int TILE_SIZE;
 extern MapTile *ActiveMap;
+extern uint32_t *wallTexture;
+extern uint32_t *BrickwallTexture;
+extern uint32_t *VentTexture;
 
 //--- Ray Structure Definition ---
 typedef struct {
@@ -113,7 +116,6 @@ void render_game(DWORD *pixels, int width, int height) {
 
     // --- Safety Guard: Ensure map and dimensions are valid ---
     if (!ActiveMap || mapWidth == 0 || mapHeight == 0) {
-        // Fill screen with dark gray if map isn't loaded yet
         for (int p = 0; p < width * height; p++) {
             pixels[p] = 0x00181818;
         }
@@ -188,14 +190,14 @@ void render_game(DWORD *pixels, int width, int height) {
             } else {
                 int tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
 
-                if (tileID == 1 || tileID == 4) {
+                if (tileID == 4 || tileID == 1 || tileID == 2 || tileID == 5) {
                     hit = 1;
                 } else if (tileID == 3) {
                     if (check_pillar_intersection(&ray, ray.mapX, ray.mapY, playerGridX, playerGridY, &pillarDist, &pillarSide)) {
                         hit = 1;
                         hitPillar = 1;
                     }
-                } else if (tileID == 2) {
+                } else if (tileID == 5) {
                     if (check_door_left_intersection(&ray, ray.mapX, ray.mapY, playerGridX, playerGridY, &pillarDist, &pillarSide)) {
                         hit = 1;
                         hitPillar = 1;
@@ -204,49 +206,107 @@ void render_game(DWORD *pixels, int width, int height) {
             }
         }
 
-        //--- Retrieve Tile ID from 1D Map Array safely ---
-        int tileID = 1;
+        //--- Retrieve Tile ID Safely ---
+        int tileID = 4;
         if (ray.mapX >= 0 && ray.mapX < (int)mapWidth && ray.mapY >= 0 && ray.mapY < (int)mapHeight) {
             tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
-            if (tileID <= 0) tileID = 1;
+            if (tileID <= 0) tileID = 4;
         }
 
-        //--- Calculate Perpendicular Distance ---
+        //--- Calculate Perpendicular Distance (Fixes Fisheye Warp) ---
         float perpWallDist;
         if (hitPillar) {
-            perpWallDist = pillarDist;
+            perpWallDist = pillarDist * (ray.rayDirX * dirX + ray.rayDirY * dirY);
             side = pillarSide;
         } else {
             perpWallDist = (side == 0) ? (ray.sideDistX - ray.deltaDistX) : (ray.sideDistY - ray.deltaDistY);
         }
 
-        // Avoid division by zero if distance is extremely close or zero
         if (perpWallDist < 1e-4f) perpWallDist = 1e-4f;
 
         //--- Calculate Height of Wall Strip ---
         int lineHeight = (int)(height / perpWallDist);
-        if (tileID == 3) {
-            lineHeight = (int)(lineHeight * 1.8f);
-        }
 
-        int drawStart = -lineHeight / 2 + height / 2;
+        // Keep true unclipped start position for smooth close-up rendering
+        int realDrawStart = -lineHeight / 2 + height / 2;
+
+        int drawStart = realDrawStart;
         if (drawStart < 0) drawStart = 0;
+        
         int drawEnd = lineHeight / 2 + height / 2;
         if (drawEnd >= height) drawEnd = height - 1;
 
-        //--- Select Hex Color ---
-        unsigned int wallColor;
-        if (tileID == 2) {
-            wallColor = (side == 1) ? 0x00237E23 : 0x0032CD32; // Green shades
-        } else if (tileID == 3) {
-            wallColor = (side == 1) ? 0x003232CD : 0x004169E1; // Blue shades
+        //--- Calculate Texture Coordinates ---
+        float wallX = 0.0f;
+        if (hitPillar) {
+            // Must use raw Euclidean pillarDist for exact world hit coordinates
+            float hitX = playerGridX + pillarDist * ray.rayDirX;
+            float hitY = playerGridY + pillarDist * ray.rayDirY;
+
+            if (tileID == 3) { 
+                if (side == 0) {
+                    wallX = (hitY - (ray.mapY + 0.35f)) / 0.30f;
+                } else {
+                    wallX = (hitX - (ray.mapX + 0.35f)) / 0.30f;
+                }
+            } else if (tileID == 5) {
+                if (side == 0) {
+                    wallX = hitY - floorf(hitY);
+                } else {
+                    wallX = (hitX - (ray.mapX + 0.35f)) / 0.30f;
+                }
+            }
         } else {
-            wallColor = (side == 1) ? 0x008B2323 : 0x00CD5C5C; // Red shades
+            if (side == 0) {
+                wallX = playerGridY + perpWallDist * ray.rayDirY;
+            } else {
+                wallX = playerGridX + perpWallDist * ray.rayDirX;
+            }
+            wallX -= floorf(wallX); // Keep decimal fraction (0.0 to 1.0)
         }
 
-        //--- Draw Vertical Column Directly into Pixel Buffer ---
+        if (wallX < 0.0f) wallX = 0.0f;
+        if (wallX > 1.0f) wallX = 1.0f;
+
+        // Map to 128x128 texture dimensions
+        int texX = (int)(wallX * 128.0f);
+        if (texX >= 128) texX = 127;
+        
+        if (side == 0 && ray.rayDirX > 0) texX = 128 - texX - 1;
+        if (side == 1 && ray.rayDirY < 0) texX = 128 - texX - 1;
+
+        //--- Draw Vertical Column Using Texture Sampling ---
         for (int y = drawStart; y <= drawEnd; y++) {
-            pixels[y * width + i] = wallColor;
+            int texY = (y - realDrawStart) * 128 / lineHeight;
+            if (texY < 0) texY = 0;
+            if (texY >= 128) texY = 127;
+
+            uint32_t color = 0x00FF00FF; // Magenta fallback error color
+
+            if (tileID == 3) {
+                if (BrickwallTexture) {
+                    color = BrickwallTexture[texY * 128 + texX];
+                }
+            } else if (tileID == 4) {
+                if (wallTexture) {
+                    color = wallTexture[texY * 128 + texX];
+                }
+            } else if (tileID == 1) {
+                color = 0x00AF3232;
+            } else if (tileID == 2) {
+                color = 0x00CDCD23;
+            } else if (tileID == 5) {
+                if (VentTexture) {
+                    color = VentTexture[texY * 128 + texX];
+                }
+            }
+
+            // Optional side-shading depth effect for horizontal/vertical walls
+            if (side == 1) {
+                color = (color >> 1) & 0x007F7F7F;
+            }
+
+            pixels[y * width + i] = color;
         }
     }
 }

@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <windows.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -33,68 +31,74 @@ typedef struct {
 } MapHeader;
 
 #pragma pack(pop)
-
+// Solid Walls
 #define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false }
-#define W  { .tile = 1, .isDeadly = false, .isLevelTransition = false }
-#define K  { .tile = 2, .isDeadly = true, .isLevelTransition = false }
-#define P  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
+#define P  { .tile = 3, .isDeadly = false, .isLevelTransition = false }
+#define W  { .tile = 4, .isDeadly = false, .isLevelTransition = false }
+#define V  { .tile = 5, .isDeadly = false, .isLevelTransition = false }
+// Deadly walls
+#define K  { .tile = 1, .isDeadly = true, .isLevelTransition = false }
+// Level Transitions
+#define T  { .tile = 2, .isDeadly = false, .isLevelTransition = true }
+
+
 
 static const MapTile maps[][MAX_TILES] = {
     {
         W, W, W, W, W, W, W, W, W,
+        W, _, _, _, _, _, _, T, W,
         W, _, _, _, _, _, _, _, W,
+        V, _, _, P, _, P, _, _, V,
+        W, _, _, _, _, _, _, _, W,
+        W, _, P, _, P, _, P, _, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, P, _, P, _, _, W,
         W, _, _, _, _, _, _, _, W,
         W, _, P, _, P, _, P, _, W,
         W, _, _, _, _, _, _, _, W,
-        W, _, _, P, _, P, _, _, W,
-        W, _, _, _, _, _, _, _, W,
-        W, _, P, _, P, _, P, _, W,
-        W, _, _, _, _, _, _, _, W,
-        W, W, W, W, W, W, W, W, W,
+        W, W, W, W, V, W, W, W, W,
     },
     {
-        W, W, W, W, W, W, W, W, W,
+        W, W, W, W, V, W, W, W, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
         W, _, W, W, _, W, W, _, W,
         W, _, W, _, _, _, W, _, W,
-        W, _, W, _, _, _, W, _, W,
-        W, _, W, _, _, _, W, _, W,
+        V, _, W, _, _, _, W, _, V,
+        W, _, W, _, T, _, W, _, W,
         W, _, W, _, _, _, W, _, W,
         W, _, W, W, W, W, W, _, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, K, K, K, _, _, W,
-        W, W, W, W, W, W, W, W, W,
+        W, W, V, W, W, W, V, W, W,
     },
     {
         W, W, W, W, W, W, W, W, W,
         W, _, W, _, _, _, _, _, W,
-        W, _, W, _, W, W, W, _, W,
+        W, _, W, _, W, W, W, _, V,
         W, _, W, _, W, _, W, _, W,
         W, _, _, _, W, _, W, _, W,
-        W, W, W, _, W, _, _, _, W,
-        W, _, _, _, W, _, W, W, W,
+        W, W, W, _, _, _, _, _, W,
+        V, _, _, _, W, _, W, W, W,
         W, _, W, W, W, _, _, _, W,
         W, _, _, _, W, W, W, _, W,
         W, W, W, _, W, _, W, _, W,
-        W, _, _, _, _, _, W, _, W,
-        W, W, W, W, W, W, W, W, W,
+        W, _, _, _, _, _, W, T, W,
+        W, W, W, W, V, W, W, W, W,
     },
     {
-        W, W, W, W, W, W, W, W, W,
+        W, W, W, W, V, W, W, W, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, _, W, _, _, _, W,
-        W, _, _, _, _, _, _, _, W,
+        V, _, _, _, _, _, _, _, V,
         W, _, _, _, K, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, _, P, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
+        W, _, _, _, T, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
-        W, _, _, _, _, _, _, _, W,
-        W, W, W, W, W, W, W, W, W,
+        W, W, W, W, V, W, W, W, W,
     },
     {
         W, W, W, W, W, W, W, W, W,
@@ -114,6 +118,8 @@ static const MapTile maps[][MAX_TILES] = {
 
 #undef _
 #undef W
+#undef K
+#undef P
 
 #define AVAILABLE_LEVELS (sizeof(maps) / sizeof(maps[0]))
 
@@ -146,7 +152,7 @@ bool SaveMapsToFile(const char *filepath, const MapTile *map_data, uint16_t num_
 }
 
 int main(void) {
-    const char *filepath = "test.gmap"; // Adjusted relative path if needed
+    const char *filepath = "level.gmap";
     uint16_t num_levels = (uint16_t)AVAILABLE_LEVELS;
 
     printf("Welcome to the map creation tool!\n");
