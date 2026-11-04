@@ -344,7 +344,7 @@ void UpdateGame() {
     float moveDeltaX = (cosA * forward - sinA * strafe) * player.movement.currentSpeed;
     float moveDeltaY = (sinA * forward + cosA * strafe) * player.movement.currentSpeed;
     
-    float radius = 15.0f;
+    float radius = 7.0f;
 
     float newX = player.x + moveDeltaX;
     float newY = player.y + moveDeltaY;
