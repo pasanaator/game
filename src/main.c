@@ -46,7 +46,7 @@ uint32_t *wallTexture = NULL;
 uint32_t *BrickwallTexture = NULL;
 uint32_t *VentTexture = NULL;
 uint32_t *FloorTexture = NULL;
-uint32_t *CeillingTexture = NULL;
+uint32_t *CeilingTexture = NULL;
 
 typedef struct {
     float speed, currentSpeed, acceleration, maxAcceleration, accelerationGrowth, decelerationRate, dirY, dirX;
@@ -209,7 +209,7 @@ void UnloadMap() {
     if (BrickwallTexture) { free(BrickwallTexture); BrickwallTexture = NULL; }
     if (VentTexture) { free(VentTexture); VentTexture = NULL; }
     if (FloorTexture) { free(FloorTexture); FloorTexture = NULL; }
-    if (CeillingTexture) { free(CeillingTexture); CeillingTexture = NULL; }
+    if (CeilingTexture) { free(CeilingTexture); CeilingTexture = NULL; }
 
     if (ActiveMap) {
         free(ActiveMap);
@@ -232,7 +232,7 @@ bool InitMap(uint8_t levelIndex) {
     BrickwallTexture = LoadTextureFile("assets\\brick_wall.bmp");
     VentTexture = LoadTextureFile("assets\\vent.bmp");
     FloorTexture = LoadTextureFile("assets\\floor.bmp");
-    CeillingTexture = LoadTextureFile("assets\\ceilling.bmp");
+    CeilingTexture = LoadTextureFile("assets\\ceiling.bmp");
 
     return TRUE;
 }
