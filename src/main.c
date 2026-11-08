@@ -53,7 +53,7 @@ typedef struct {
 } Movement;
 
 typedef struct {
-    float x, y;
+    float x, y, stX, stY;
     float angle;
     Movement movement;
 } Player;
@@ -264,6 +264,8 @@ Collision isColliding(float x, float y, float r) {
 Player player = {
     .x = 3.0f * TILE_SIZE,
     .y = 2.0f * TILE_SIZE,
+    .stX = 3.0f * TILE_SIZE,
+    .stY = 2.0f * TILE_SIZE,
     .movement = {
         .speed = 0.5f,
         .acceleration = 1.0f,
@@ -351,11 +353,13 @@ void UpdateGame() {
 
     // Collision
     if (moveDeltaX != 0.0f || moveDeltaY != 0.0f) {
+        if (coll.isDeadly) Death = TRUE;
+        if (coll.isLevelTransition) InitMap(LevelIndex++);
         // --- X-Axis Movement ---
         float oldX = player.x;
         player.x = newX;
         if (isColliding(player.x, player.y, radius).isColliding) {
-            player.x = oldX; // Safe: never lets you tunnel through X walls
+            player.x = oldX;
         }
 
         // --- Y-Axis Movement ---
@@ -363,10 +367,8 @@ void UpdateGame() {
         player.y = newY;
         coll = isColliding(player.x, player.y, radius);
         if (coll.isColliding) {
-            player.y = oldY; // Safe: never lets you tunnel through Y walls
+            player.y = oldY;
         }
-        if (coll.isDeadly) Death = TRUE;
-        if (coll.isLevelTransition) InitMap(LevelIndex++);
     }
     
 
@@ -384,8 +386,8 @@ void UpdateGame() {
         // Counter uses time in frames passed, at a nominal 60FPS this equates to 2 seconds
         if (counter == 120) {
             // Temporarily using hardcoded values
-            player.x = 3.0f * TILE_SIZE;
-            player.y = 2.0f * TILE_SIZE;
+            player.x = player.stX;
+            player.y = player.stY;
             InitMap(0);
             Death = FALSE;
             counter = 0;

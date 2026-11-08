@@ -44,7 +44,7 @@ typedef struct {
 } Movement;
 
 typedef struct {
-    float x, y;
+    float x, y, stX, stY;
     float angle;
     Movement movement;
 } Player;
