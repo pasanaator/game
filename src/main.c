@@ -78,12 +78,16 @@ typedef struct {
     uint32_t pad;
 } MapHeader;
 
+// Modify Object typedef if needed to support animation
 typedef struct {
     uint16_t x, y;
     uint8_t sym;
 } Object;
 
 MapTile *ActiveMap = NULL;
+
+//Object *door = NULL; Uncomment to use doorcount
+//int doorCount = 0;
 
 uint32_t *LoadTextureFile(const char *filename) {
     FILE *f = fopen(filename, "rb");
@@ -217,6 +221,39 @@ void UnloadMap() {
     }
 }
 
+int CountObjects(Object **o,MapTile *map, uint8_t id)  {
+    totalTiles = (size_t)mapWidth * mapHeight;
+    if (totalTiles == 0 || !map) {
+        *o = NULL;
+        return 0;
+    }
+
+    *o = malloc(totalTiles * sizeof(Object));
+    if (*o == NULL) {
+        perror("Failed to allocate *o\n");
+        exit(1);
+    }
+
+    int ObjectCount = 0;
+    for (size_t i = 0; i < totalTiles; i++) {
+        if (map[i].tile == id) {
+            (*o)[ObjectCount].x = (uint16_t)(i % mapWidth);
+            (*o)[ObjectCount].y = (uint16_t)(i / mapWidth);
+            ObjectCount++;
+        }
+    }
+    if (ObjectCount == 0) {
+        free(*o);
+        *o = NULL;
+        return 0;
+    }
+    Object *temp = realloc(*o, ObjectCount * sizeof(Object));
+    if (temp) {
+        *o = temp;
+    }
+    return ObjectCount;
+}
+
 bool InitMap(uint8_t levelIndex) {
     if (levelIndex > total_levels) {
         perror("Invalid level index");
@@ -233,6 +270,8 @@ bool InitMap(uint8_t levelIndex) {
     VentTexture = LoadTextureFile("assets\\vent.bmp");
     FloorTexture = LoadTextureFile("assets\\floor.bmp");
     CeilingTexture = LoadTextureFile("assets\\ceiling.bmp");
+
+//    doorCount = CountObjects(&doorCount, ActiveMap, 5); Uncomment to use doorcount
 
     return TRUE;
 }
