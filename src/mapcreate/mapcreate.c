@@ -62,7 +62,7 @@ static const MapTile maps[][MAX_TILES] = {
         W, W, W, W, V, W, W, W, W,
         W, _, _, _, _, _, _, _, W,
         W, _, _, _, _, _, _, _, W,
-        W, _, W, W, _, W, W, _, W,
+        W, _, W, W, P, W, W, _, W,
         W, _, W, _, _, _, W, _, W,
         V, _, W, _, _, _, W, _, V,
         W, _, W, _, T, _, W, _, W,
