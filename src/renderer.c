@@ -42,11 +42,13 @@ extern uint8_t mapWidth;
 extern uint8_t mapHeight;
 extern const int TILE_SIZE;
 extern MapTile *ActiveMap;
+
 extern uint32_t *VentTexture;
 extern uint32_t *wallTexture;
 extern uint32_t *BrickwallTexture;
 extern uint32_t *FloorTexture;
 extern uint32_t *CeilingTexture;
+
 extern Player player;
 
 //--- Fog Utility ---
@@ -207,7 +209,7 @@ void render_game(DWORD *pixels, int width, int height) {
             } else {
                 int tileID = ActiveMap[ray.mapY * mapWidth + ray.mapX].tile;
 
-                if (tileID == 4 || tileID == 1 || tileID == 2) {
+                if (tileID == 4 || tileID == 1 || tileID == 2 || tileID == 5) {
                     hit = 1; 
                 } 
                 else if (tileID == 3) {
@@ -276,6 +278,10 @@ void render_game(DWORD *pixels, int width, int height) {
                     color = 0x00AF3232; // Solid color fallbacks for other IDs if needed
                 } else if (tileID == 2) {
                     color = 0x00CDCD23;
+                } 
+                
+                if (tileID == 5 && VentTexture) {
+                    color = VentTexture[texY * 128 + texX];
                 }
             }
             
