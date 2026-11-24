@@ -14,7 +14,7 @@ typedef struct {
     uint8_t tile;
     bool isDeadly : 1;
     bool isLevelTransition : 1;
-    bool pad2 : 1;
+    bool isDoor : 1;
     bool pad3 : 1;
     bool pad4 : 1;
     bool pad5 : 1;
@@ -32,14 +32,14 @@ typedef struct {
 
 #pragma pack(pop)
 // Solid Walls
-#define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false } // floor
-#define P  { .tile = 3, .isDeadly = false, .isLevelTransition = false } // pillar/door
-#define W  { .tile = 4, .isDeadly = false, .isLevelTransition = false } // wall
-#define V  { .tile = 5, .isDeadly = false, .isLevelTransition = false } // vent
+#define _  { .tile = 0, .isDeadly = false, .isLevelTransition = false, .isDoor = false} // floor
+#define P  { .tile = 3, .isDeadly = false, .isLevelTransition = false, .isDoor = true} // pillar/door
+#define W  { .tile = 4, .isDeadly = false, .isLevelTransition = false, .isDoor = false} // wall
+#define V  { .tile = 5, .isDeadly = false, .isLevelTransition = false, .isDoor = false} // vent
 // Deadly walls
-#define K  { .tile = 1, .isDeadly = true, .isLevelTransition = false } // deadly wall
+#define K  { .tile = 1, .isDeadly = true, .isLevelTransition = false, .isDoor = false} // deadly wall
 // Level Transitions
-#define T  { .tile = 2, .isDeadly = false, .isLevelTransition = true } // level transition
+#define T  { .tile = 2, .isDeadly = false, .isLevelTransition = true, .isDoor = false} // level transition
 
 
 

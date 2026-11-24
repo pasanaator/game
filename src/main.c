@@ -80,7 +80,7 @@ typedef struct {
     uint8_t tile;
     bool isDeadly : 1;
     bool isLevelTransition : 1;
-    bool pad2 : 1;
+    bool isDoor : 1;
     bool pad3 : 1;
     bool pad4 : 1;
     bool pad5 : 1;
@@ -271,9 +271,14 @@ bool InitMap(uint8_t levelIndex) {
 }
 
 typedef struct {
-    bool isColliding;
-    bool isDeadly;
-    bool isLevelTransition;
+    bool isColliding : 1;
+    bool isDeadly : 1;
+    bool isLevelTransition : 1;
+    bool isDoor : 1;
+    bool pad1 : 1;
+    bool pad2 : 1;
+    bool pad3 : 1;
+    bool pad4 : 1;
 } Collision;
 
 Collision coll = {NULL};
@@ -291,6 +296,8 @@ Collision isColliding(float x, float y, float r) {
         fColl.isDeadly = TRUE;
     if (ActiveMap[top * mapWidth + left].isLevelTransition || ActiveMap[top * mapWidth + right].isLevelTransition || ActiveMap[bottom * mapWidth + left].isLevelTransition || ActiveMap[bottom * mapWidth + right].isLevelTransition)
         fColl.isLevelTransition = TRUE;
+    if (ActiveMap[top * mapWidth + left].isDoor || ActiveMap[top * mapWidth + right].isDoor || ActiveMap[bottom * mapWidth + left].isDoor || ActiveMap[bottom * mapWidth + right].isDoor)
+        fColl.isDoor = TRUE;
     return fColl;
 }
 
@@ -387,17 +394,23 @@ void UpdateGame() {
         // --- X-Axis Movement ---
         float oldX = player.x;
         player.x = newX;
-        if (isColliding(player.x, player.y, radius).isColliding) {
+        
+        coll = isColliding(player.x, player.y, radius);
+        if (coll.isDoor) coll.isColliding = FALSE; // Doors don't block movement like solid walls
+        
+        if (coll.isColliding && !coll.isDoor) {
             player.x = oldX; // Safe: never lets you tunnel through X walls
         }
 
         // --- Y-Axis Movement ---
         float oldY = player.y;
         player.y = newY;
+        
         coll = isColliding(player.x, player.y, radius);
-        if (coll.isColliding) {
+        if (coll.isColliding && !coll.isDoor) {
             player.y = oldY; // Safe: never lets you tunnel through Y walls
         }
+        
         if (coll.isDeadly) Death = TRUE;
         if (coll.isLevelTransition) InitMap(LevelIndex++);
     }

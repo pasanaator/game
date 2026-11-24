@@ -10,7 +10,7 @@ typedef struct {
     uint8_t tile;
     bool isDeadly : 1;
     bool isLevelTransition : 1;
-    bool pad2 : 1;
+    bool isDoor : 1;
     bool pad3 : 1;
     bool pad4 : 1;
     bool pad5 : 1;
