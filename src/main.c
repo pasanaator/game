@@ -8,7 +8,8 @@
 #include <math.h>
 #include <stdbool.h>
 
-#include "renderer.h"
+#ifndef RENDERER_H
+#define RENDERER_H
 
 #define AUDIO_VOLUME 125
 
@@ -17,6 +18,18 @@
 
 #ifndef defDEBUG
     #define defDEBUG FALSE
+#endif
+#define MAX_SPRITES 64
+
+typedef struct {
+    float x, y;          // World coordinates
+    uint32_t *texture;   // Pointer to its BMP texture
+    bool active;
+    int type;            // 0 = Skull, 1 = Item, etc.
+} Sprite;
+
+void render_game(DWORD *pixels, int width, int height);
+
 #endif
 
 int W_WIDTH = 960;
@@ -48,12 +61,17 @@ uint32_t *VentTexture = NULL;
 uint32_t *FloorTexture = NULL;
 uint32_t *CeilingTexture = NULL;
 
+uint32_t *SkullTexture = NULL;
+
+Sprite sprites[MAX_SPRITES];
+int spriteCount = 0;
+
 typedef struct {
     float speed, currentSpeed, acceleration, maxAcceleration, accelerationGrowth, decelerationRate, dirY, dirX;
 } Movement;
 
 typedef struct {
-    float x, y, stX, stY;
+    float x, y;
     float angle;
     Movement movement;
 } Player;
@@ -78,16 +96,12 @@ typedef struct {
     uint32_t pad;
 } MapHeader;
 
-// Modify Object typedef if needed to support animation
 typedef struct {
     uint16_t x, y;
     uint8_t sym;
 } Object;
 
 MapTile *ActiveMap = NULL;
-
-//Object *door = NULL; Uncomment to use doorcount
-//int doorCount = 0;
 
 uint32_t *LoadTextureFile(const char *filename) {
     FILE *f = fopen(filename, "rb");
@@ -221,37 +235,15 @@ void UnloadMap() {
     }
 }
 
-int CountObjects(Object **o,MapTile *map, uint8_t id)  {
-    totalTiles = (size_t)mapWidth * mapHeight;
-    if (totalTiles == 0 || !map) {
-        *o = NULL;
-        return 0;
+void SpawnSkullEntity(float worldX, float worldY) {
+    if (spriteCount < MAX_SPRITES) {
+        sprites[spriteCount].x = worldX;
+        sprites[spriteCount].y = worldY;
+        sprites[spriteCount].texture = SkullTexture;
+        sprites[spriteCount].active = true;
+        sprites[spriteCount].type = 0; 
+        spriteCount++;
     }
-
-    *o = malloc(totalTiles * sizeof(Object));
-    if (*o == NULL) {
-        perror("Failed to allocate *o\n");
-        exit(1);
-    }
-
-    int ObjectCount = 0;
-    for (size_t i = 0; i < totalTiles; i++) {
-        if (map[i].tile == id) {
-            (*o)[ObjectCount].x = (uint16_t)(i % mapWidth);
-            (*o)[ObjectCount].y = (uint16_t)(i / mapWidth);
-            ObjectCount++;
-        }
-    }
-    if (ObjectCount == 0) {
-        free(*o);
-        *o = NULL;
-        return 0;
-    }
-    Object *temp = realloc(*o, ObjectCount * sizeof(Object));
-    if (temp) {
-        *o = temp;
-    }
-    return ObjectCount;
 }
 
 bool InitMap(uint8_t levelIndex) {
@@ -270,8 +262,10 @@ bool InitMap(uint8_t levelIndex) {
     VentTexture = LoadTextureFile("assets\\vent.bmp");
     FloorTexture = LoadTextureFile("assets\\floor.bmp");
     CeilingTexture = LoadTextureFile("assets\\ceiling.bmp");
+    SkullTexture = LoadTextureFile("assets\\skull.bmp");
 
-//    doorCount = CountObjects(&doorCount, ActiveMap, 5); Uncomment to use doorcount
+    spriteCount = 0;
+    SpawnSkullEntity(5.0f * TILE_SIZE, 3.0f * TILE_SIZE);
 
     return TRUE;
 }
@@ -303,8 +297,6 @@ Collision isColliding(float x, float y, float r) {
 Player player = {
     .x = 3.0f * TILE_SIZE,
     .y = 2.0f * TILE_SIZE,
-    .stX = 3.0f * TILE_SIZE,
-    .stY = 2.0f * TILE_SIZE,
     .movement = {
         .speed = 0.5f,
         .acceleration = 1.0f,
@@ -392,13 +384,11 @@ void UpdateGame() {
 
     // Collision
     if (moveDeltaX != 0.0f || moveDeltaY != 0.0f) {
-        if (coll.isDeadly) Death = TRUE;
-        if (coll.isLevelTransition) InitMap(LevelIndex++);
         // --- X-Axis Movement ---
         float oldX = player.x;
         player.x = newX;
         if (isColliding(player.x, player.y, radius).isColliding) {
-            player.x = oldX;
+            player.x = oldX; // Safe: never lets you tunnel through X walls
         }
 
         // --- Y-Axis Movement ---
@@ -406,8 +396,10 @@ void UpdateGame() {
         player.y = newY;
         coll = isColliding(player.x, player.y, radius);
         if (coll.isColliding) {
-            player.y = oldY;
+            player.y = oldY; // Safe: never lets you tunnel through Y walls
         }
+        if (coll.isDeadly) Death = TRUE;
+        if (coll.isLevelTransition) InitMap(LevelIndex++);
     }
     
 
@@ -425,8 +417,8 @@ void UpdateGame() {
         // Counter uses time in frames passed, at a nominal 60FPS this equates to 2 seconds
         if (counter == 120) {
             // Temporarily using hardcoded values
-            player.x = player.stX;
-            player.y = player.stY;
+            player.x = 3.0f * TILE_SIZE;
+            player.y = 2.0f * TILE_SIZE;
             InitMap(0);
             Death = FALSE;
             counter = 0;

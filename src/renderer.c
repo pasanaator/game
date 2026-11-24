@@ -37,6 +37,17 @@ typedef struct {
     Movement movement;
 } Player;
 
+#define MAX_SPRITES 64
+
+typedef struct {
+    float x, y;          // World position
+    uint32_t *texture;   // Pointer to its specific BMP texture
+    bool active;
+    int type;            // E.g., 0 = Skull Entity, 1 = Health pack, 2 = Key
+} Sprite;
+extern Sprite sprites[MAX_SPRITES];
+extern int spriteCount;
+
 //--- External References ---
 extern uint8_t mapWidth;
 extern uint8_t mapHeight;
@@ -144,6 +155,9 @@ void render_game(DWORD *pixels, int width, int height) {
         return;
     }
 
+    float *zBuffer = malloc(width * sizeof(float));
+    if (!zBuffer) return;
+
     // Clear Screen Buffer
     for (int p = 0; p < width * height; p++) {
         pixels[p] = 0x00181818; 
@@ -236,6 +250,7 @@ void render_game(DWORD *pixels, int width, int height) {
 
         if (perpWallDist < 1e-4f) perpWallDist = 1e-4f;
 
+
         // Distance & Line Calculation
         if (perpWallDist < 1e-4f) perpWallDist = 1e-4f;
 
@@ -291,6 +306,8 @@ void render_game(DWORD *pixels, int width, int height) {
 
             pixels[y * width + i] = color;
         }
+        
+        zBuffer[i] = perpWallDist;
 
         // Draw Floor
         for (int y = drawEnd + 1; y < height; y++) {
@@ -328,4 +345,55 @@ void render_game(DWORD *pixels, int width, int height) {
             pixels[y * width + i] = color;
         }
     }
+    for (int i = 0; i < spriteCount; i++) {
+        if (!sprites[i].active) continue;
+
+        // 1. Translate and transform coordinates relative to the player
+        float spriteX = sprites[i].x - player.x;
+        float spriteY = sprites[i].y - player.y;
+
+        float invDet = 1.0f / (plane_x * dirY - dirX * plane_y);
+        float transformX = invDet * (dirY * spriteX - dirX * spriteY);
+        float transformY = invDet * (-plane_y * spriteX + plane_x * spriteY);
+
+        if (transformY > 0.2f) {
+            int spriteScreenX = (int)((width / 2) * (1.0f + transformX / transformY));
+
+            int spriteHeight = abs((int)(height / transformY));
+            int drawStartY = -spriteHeight / 2 + height / 2;
+            if (drawStartY < 0) drawStartY = 0;
+            int drawEndY = spriteHeight / 2 + height / 2;
+            if (drawEndY >= height) drawEndY = height - 1;
+
+            int spriteWidth = abs((int)(height / transformY));
+            int drawStartX = -spriteWidth / 2 + spriteScreenX;
+            if (drawStartX < 0) drawStartX = 0;
+            int drawEndX = spriteWidth / 2 + spriteScreenX;
+            if (drawEndX >= width) drawEndX = width - 1;
+
+            // Draw vertical stripes
+            for (int stripe = drawStartX; stripe < drawEndX; stripe++) {
+                int texX = (int)((256.0f * (stripe - (-spriteWidth / 2 + spriteScreenX)) / spriteWidth) / 2.0f);
+                
+                // Z-Buffer check shared by ALL sprites
+                if (transformY < zBuffer[stripe]) {
+                    for (int y = drawStartY; y < drawEndY; y++) {
+                        int d = y * 256 - height * 128 + spriteHeight * 128;
+                        int texY = ((d * 128) / spriteHeight) / 256;
+                        if (texY < 0) texY = 0; if (texY >= 128) texY = 127;
+                        if (texX < 0) texX = 0; if (texX >= 128) texX = 127;
+
+                        // Uses whatever texture pointer this specific sprite holds!
+                        uint32_t color = sprites[i].texture[texY * 128 + texX];
+
+                        // Universal transparency color key
+                        if (color != 0x00FF00FF) {
+                            pixels[y * width + stripe] = color;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    free(zBuffer);
 }
