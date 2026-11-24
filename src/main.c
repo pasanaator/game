@@ -14,6 +14,7 @@
 #define AUDIO_VOLUME 125
 
 #define MAP_VERSION 1
+#define TILE_SIZE 50
 #define FILENAME "assets\\level.gmap"
 
 #ifndef defDEBUG
@@ -37,7 +38,6 @@ int W_HEIGHT = 540;
 int clientWidth = 0;
 int clientHeight = 0;
 bool STRETCH = TRUE;
-const int TILE_SIZE = 50;
 bool isFocused = false;
 bool isCursorHidden = false;
 bool DEBUG = defDEBUG;
@@ -429,9 +429,14 @@ void UpdateGame() {
         static uint16_t counter = 0;
         // Counter uses time in frames passed, at a nominal 60FPS this equates to 2 seconds
         if (counter == 120) {
+<<<<<<< Updated upstream
             // Temporarily using hardcoded values
             player.x = 3.0f * TILE_SIZE;
             player.y = 2.0f * TILE_SIZE;
+=======
+            player.x = player.stX;
+            player.y = player.stY;
+>>>>>>> Stashed changes
             InitMap(0);
             Death = FALSE;
             counter = 0;
