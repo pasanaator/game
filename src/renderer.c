@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define MAX_SPRITES 255
+
 //--- Struct Definitions ---
 typedef struct {
     uint8_t tile;
@@ -37,13 +39,11 @@ typedef struct {
     Movement movement;
 } Player;
 
-#define MAX_SPRITES 64
-
 typedef struct {
     float x, y;          // World position
     uint32_t *texture;   // Pointer to its specific BMP texture
     bool active;
-    int type;            // E.g., 0 = Skull Entity, 1 = Health pack, 2 = Key
+    uint8_t type;            // E.g., 0 = Skull Entity, 1 = Health pack, 2 = Key
 } Sprite;
 extern Sprite sprites[MAX_SPRITES];
 extern int spriteCount;
